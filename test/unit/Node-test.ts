@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import type { Shape } from '../../src/Shape.ts';
+import { Factory } from '../../src/Factory.ts';
 
 import {
   addStage,
@@ -3947,6 +3948,14 @@ describe('Node', function () {
     assert.equal(rect.getAttr('meta').keep, 1);
   });
 
+  it('new Transform() copies the matrix it is given', function () {
+    var m = [1, 2, 3, 4, 5, 6];
+    var tr = new Konva.Transform(m);
+    m[4] = 100;
+    assert.deepEqual(tr.m, [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(new Konva.Transform().m, [1, 0, 0, 1, 0, 0]);
+  });
+
   it('a prototype listener added after an instance fired the event is picked up', function () {
     class MyShape extends Konva.Shape {}
     var shape = new MyShape();
@@ -3978,4 +3987,10 @@ describe('Node', function () {
     assert.equal(JSON.parse(rect.toJSON()).attrs.meta.createdAt, date.toJSON());
   });
 
+  it('a component attribute without component getters still reads from attrs', function () {
+    class MyShape extends Konva.Shape {}
+    Factory.addComponentsGetterSetter(MyShape, 'foo', ['x', 'y']);
+    var shape = new MyShape({ fooX: 1, fooY: 2 });
+    assert.deepEqual(shape['foo'](), { x: 1, y: 2 });
+  });
 });

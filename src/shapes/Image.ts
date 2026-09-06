@@ -93,27 +93,6 @@ export class Image extends Shape<ImageConfig> {
     const height = this.getHeight();
     const cornerRadius = this.cornerRadius();
     const image = this.attrs.image;
-    let params;
-
-    if (image) {
-      const cropWidth = this.attrs.cropWidth;
-      const cropHeight = this.attrs.cropHeight;
-      if (cropWidth && cropHeight) {
-        params = [
-          image,
-          this.cropX(),
-          this.cropY(),
-          cropWidth,
-          cropHeight,
-          0,
-          0,
-          width,
-          height,
-        ];
-      } else {
-        params = [image, 0, 0, width, height];
-      }
-    }
 
     if (this.hasFill() || this.hasStroke() || cornerRadius) {
       context.beginPath();
@@ -128,7 +107,23 @@ export class Image extends Shape<ImageConfig> {
       if (cornerRadius) {
         context.clip();
       }
-      context.drawImage.apply(context, params);
+      const cropWidth = this.attrs.cropWidth;
+      const cropHeight = this.attrs.cropHeight;
+      if (cropWidth && cropHeight) {
+        context.drawImage(
+          image,
+          this.cropX(),
+          this.cropY(),
+          cropWidth,
+          cropHeight,
+          0,
+          0,
+          width,
+          height
+        );
+      } else {
+        context.drawImage(image, 0, 0, width, height);
+      }
     }
     // If you need to draw later, you need to execute save/restore
   }

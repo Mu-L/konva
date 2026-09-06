@@ -123,15 +123,18 @@ export const Factory = {
     const len = components.length,
       capitalize = Util._capitalize,
       getter = GET + capitalize(attr),
-      setter = SET + capitalize(attr);
+      setter = SET + capitalize(attr),
+      keys = components.map((c) => attr + capitalize(c)),
+      // built-in components have their own getters, e.g. getOffsetX
+      getters = keys.map((key) => GET + capitalize(key));
 
     // getter
     constructor.prototype[getter] = function () {
       const ret: Record<string, any> = {};
 
       for (let n = 0; n < len; n++) {
-        const component = components[n];
-        ret[component] = this.getAttr(attr + capitalize(component));
+        const get = this[getters[n]];
+        ret[components[n]] = get ? get.call(this) : this.attrs[keys[n]];
       }
 
       return ret;

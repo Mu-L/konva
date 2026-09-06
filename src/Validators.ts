@@ -139,13 +139,14 @@ export function getFunctionValidator<T>() {
     };
   }
 }
+// the common ancestor of every typed array
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray#description
+const TypedArray = Object.getPrototypeOf(Int8Array);
+
 export function getNumberArrayValidator<T>() {
   if (Konva.isUnminified) {
     return function (val: T, attr: string): T {
-      // Retrieve TypedArray constructor as found in MDN (if TypedArray is available)
-      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray#description
-      const TypedArray = Int8Array ? Object.getPrototypeOf(Int8Array) : null;
-      if (TypedArray && val instanceof TypedArray) {
+      if (val instanceof TypedArray) {
         return val;
       }
       if (!Util._isArray(val)) {

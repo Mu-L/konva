@@ -49,8 +49,8 @@ const ensureBrowser = () => {
 export class Transform {
   m: Array<number>;
   dirty = false;
-  constructor(m = [1, 0, 0, 1, 0, 0]) {
-    this.m = (m && m.slice()) || [1, 0, 0, 1, 0, 0];
+  constructor(m?: Array<number>) {
+    this.m = m ? m.slice() : [1, 0, 0, 1, 0, 0];
   }
   reset() {
     this.m[0] = 1;
