@@ -494,17 +494,7 @@ export abstract class Container<
       }
     });
 
-    // if child is group we need to make sure it has visible shapes inside
-    const shapes = this.find('Shape');
-    let hasVisible = false;
-    for (let i = 0; i < shapes.length; i++) {
-      const shape = shapes[i];
-      if (shape._isVisible(this)) {
-        hasVisible = true;
-        break;
-      }
-    }
-    if (hasVisible && minX !== undefined) {
+    if (minX !== undefined) {
       selfRect = {
         x: minX,
         y: minY,

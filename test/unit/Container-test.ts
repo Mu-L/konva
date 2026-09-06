@@ -1,6 +1,12 @@
 import { assert } from 'chai';
 import type { Shape } from '../../src/Shape.js';
-import { addStage, Konva, compareLayers, isNode } from './test-utils.ts';
+import {
+  addStage,
+  Konva,
+  compareLayers,
+  isNode,
+  countCalls,
+} from './test-utils.ts';
 
 describe('Container', function () {
   // ======================================================
@@ -2729,5 +2735,31 @@ describe('Container', function () {
         '_' +
         data[3]
     );
+  });
+
+  it('getClientRect does not search the subtree at every nesting level', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var parent: any = layer;
+    for (var i = 0; i < 5; i++) {
+      var group = new Konva.Group();
+      group.add(
+        new Konva.Rect({ x: i * 10, y: i * 10, width: 50, height: 50 })
+      );
+      parent.add(group);
+      parent = group;
+    }
+
+    var calls = countCalls(Konva.Container.prototype, 'find', () => {
+      assert.deepEqual(layer.getClientRect(), {
+        x: 0,
+        y: 0,
+        width: 90,
+        height: 90,
+      });
+    });
+    assert.equal(calls, 0);
   });
 });
