@@ -2134,7 +2134,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _toKonvaCanvas(config) {
     config = config || {};
 
-    const box = this.getClientRect();
+    // the client rect is only needed for the parts of the box not configured
+    const needsBox =
+      config.x === undefined ||
+      config.y === undefined ||
+      !config.width ||
+      !config.height;
+    const box = needsBox
+      ? this.getClientRect()
+      : { x: 0, y: 0, width: 0, height: 0 };
 
     const stage = this.getStage(),
       x = config.x !== undefined ? config.x : Math.floor(box.x),

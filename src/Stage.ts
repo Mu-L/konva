@@ -373,6 +373,8 @@ export class Stage extends Container<Layer, StageConfig> {
       _context.translate(-1 * config.x, -1 * config.y);
     }
 
+    // every layer renders on its own canvas, like on screen, so a
+    // globalCompositeOperation inside a layer does not reach the layers below
     layers.forEach(function (layer) {
       if (!layer.isVisible()) {
         return;
@@ -385,6 +387,7 @@ export class Stage extends Container<Layer, StageConfig> {
         layerCanvas.getWidth() / layerCanvas.getPixelRatio(),
         layerCanvas.getHeight() / layerCanvas.getPixelRatio()
       );
+      Util.releaseCanvas(layerCanvas._canvas);
     });
     return canvas;
   }

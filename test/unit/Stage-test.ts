@@ -16,6 +16,7 @@ import {
   isBrowser,
   Konva,
   createCanvasAndContext,
+  collectCanvasAllocations,
 } from './test-utils.ts';
 
 describe('Stage', function () {
@@ -1584,5 +1585,52 @@ describe('Stage', function () {
       stage.width(),
       'buffer hit canvas follows the stage size'
     );
+  });
+
+  it('toCanvas() releases the intermediate layer canvases', function () {
+    var stage = addStage();
+    var layer1 = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer1.add(
+      new Konva.Rect({ x: 20, y: 20, width: 100, height: 100, fill: 'red' })
+    );
+    layer2.add(new Konva.Circle({ x: 120, y: 120, radius: 50, fill: 'blue' }));
+    stage.add(layer1, layer2);
+
+    let exported;
+    const allocations = collectCanvasAllocations(() => {
+      exported = stage.toCanvas();
+    });
+    assert.equal(allocations.length, 3, 'export canvas and one per layer');
+    allocations.forEach(({ canvas }) => {
+      if (canvas._canvas !== exported) {
+        assert.equal(canvas._canvas.width, 0, 'layer canvas is released');
+      }
+    });
+  });
+
+  it('toCanvas() keeps a globalCompositeOperation inside its layer, like on screen', function () {
+    var stage = addStage();
+    var background = new Konva.Layer();
+    var drawing = new Konva.Layer();
+    background.add(new Konva.Rect({ width: 200, height: 200, fill: 'red' }));
+    drawing.add(new Konva.Rect({ width: 200, height: 200, fill: 'blue' }));
+    // an eraser: must not punch through the background layer
+    drawing.add(
+      new Konva.Circle({
+        x: 100,
+        y: 100,
+        radius: 50,
+        fill: 'black',
+        globalCompositeOperation: 'destination-out',
+      })
+    );
+    stage.add(background, drawing);
+
+    var pixel = stage
+      .toCanvas()
+      .getContext('2d')!
+      .getImageData(100, 100, 1, 1).data;
+    assert.deepEqual(Array.from(pixel), [255, 0, 0, 255]);
   });
 });
