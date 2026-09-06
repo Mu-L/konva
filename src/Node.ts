@@ -272,7 +272,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   attrs: any = {};
   index = 0;
   parent: Container | null = null;
-  _cache: Map<string, any> = new Map<string, any>();
+  // derived values (transforms, visibility, opacity...), see _getCache()
+  _cache: Record<string, any> = {};
   // canvases of cache(), see _getCanvasCache()
   _canvasCache: {
     scene: SceneCanvas;
@@ -282,7 +283,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     x: number;
     y: number;
   } | null = null;
-  _attachedDepsListeners: Map<string, boolean> = new Map<string, boolean>();
   _lastPos: Vector2d | null = null;
   _attrsAffectingSize!: string[];
   _batchingTransformChange = false;
@@ -316,13 +316,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // so we don't need to create a new instance next time
     if (
       (attr === TRANSFORM || attr === ABSOLUTE_TRANSFORM) &&
-      this._cache.get(attr)
+      this._cache[attr]
     ) {
-      (this._cache.get(attr) as Transform).dirty = true;
+      (this._cache[attr] as Transform).dirty = true;
     } else if (attr) {
-      this._cache.delete(attr);
+      this._cache[attr] = undefined;
     } else {
-      this._cache.clear();
+      this._cache = {};
     }
   }
   // drop the cached canvases and give their memory back
@@ -338,7 +338,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
   }
   _getCache(attr: string, privateGetter: Function) {
-    let cache = this._cache.get(attr);
+    let cache = this._cache[attr];
 
     // for transform the cache can be NOT empty
     // but we still need to recalculate it if it is dirty
@@ -349,24 +349,10 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // if not cached, we need to set it using the private getter method.
     if (invalid) {
       cache = privateGetter.call(this);
-      this._cache.set(attr, cache);
+      this._cache[attr] = cache;
     }
 
     return cache;
-  }
-
-  _calculate(name: string, deps: Array<string>, getter: Function) {
-    // if we are trying to calculate function for the first time
-    // we need to attach listeners for change events
-    if (!this._attachedDepsListeners.get(name)) {
-      const depsString = deps.map((dep) => dep + 'Change.konva').join(SPACE);
-      this.on(depsString, () => {
-        this._clearCache(name);
-      });
-      this._attachedDepsListeners.set(name, true);
-    }
-    // just use cache function
-    return this._getCache(name, getter);
   }
 
   _getCanvasCache() {
@@ -1968,7 +1954,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return at;
     } else {
       // try to use a cached value
-      at = this._cache.get(ABSOLUTE_TRANSFORM) || new Transform();
+      at = this._cache[ABSOLUTE_TRANSFORM] || new Transform();
       if (this.parent) {
         // transform will be cached
         this.parent.getAbsoluteTransform().copyInto(at);
@@ -2052,7 +2038,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     return this._getCache(TRANSFORM, this._getTransform) as Transform;
   }
   _getTransform(): Transform {
-    const m: Transform = this._cache.get(TRANSFORM) || new Transform();
+    const m: Transform = this._cache[TRANSFORM] || new Transform();
     m.reset();
 
     // I was trying to use attributes directly here

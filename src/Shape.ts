@@ -97,6 +97,8 @@ export type FillFuncOutput =
   | [Path2D, CanvasFillRule];
 
 const HAS_SHADOW = 'hasShadow';
+const HAS_FILL = 'hasFill';
+const HAS_STROKE = 'hasStroke';
 const SHADOW_RGBA = 'shadowRGBA';
 const patternImage = 'patternImage';
 const linearGradient = 'linearGradient';
@@ -144,6 +146,14 @@ function _strokeFuncHit(context) {
 
 function _clearHasShadowCache(this: Node) {
   this._clearCache(HAS_SHADOW);
+}
+
+function _clearHasFillCache(this: Node) {
+  this._clearCache(HAS_FILL);
+}
+
+function _clearHasStrokeCache(this: Node) {
+  this._clearCache(HAS_STROKE);
 }
 
 function _clearGetShadowRGBACache(this: Node) {
@@ -382,26 +392,17 @@ export class Shape<
    * @returns {Boolean}
    */
   hasFill() {
-    return this._calculate(
-      'hasFill',
-      [
-        'fillEnabled',
-        'fill',
-        'fillPatternImage',
-        'fillLinearGradientColorStops',
-        'fillRadialGradientColorStops',
-      ],
-      () => {
-        return (
-          this.fillEnabled() &&
-          !!(
-            this.fill() ||
-            this.fillPatternImage() ||
-            this.fillLinearGradientColorStops() ||
-            this.fillRadialGradientColorStops()
-          )
-        );
-      }
+    return this._getCache(HAS_FILL, this._hasFill);
+  }
+  _hasFill() {
+    return (
+      this.fillEnabled() &&
+      !!(
+        this.fill() ||
+        this.fillPatternImage() ||
+        this.fillLinearGradientColorStops() ||
+        this.fillRadialGradientColorStops()
+      )
     );
   }
   /**
@@ -411,29 +412,16 @@ export class Shape<
    * @returns {Boolean}
    */
   hasStroke() {
-    return this._calculate(
-      'hasStroke',
-      [
-        'strokeEnabled',
-        'strokeWidth',
-        'stroke',
-        'strokeLinearGradientColorStops',
-      ],
-      () => {
-        return (
-          this.strokeEnabled() &&
-          this.strokeWidth() &&
-          !!(this.stroke() || this.strokeLinearGradientColorStops())
-          // this.getStrokeRadialGradientColorStops()
-        );
-      }
+    return this._getCache(HAS_STROKE, this._hasStroke);
+  }
+  _hasStroke() {
+    return (
+      this.strokeEnabled() &&
+      !!(
+        this.strokeWidth() &&
+        (this.stroke() || this.strokeLinearGradientColorStops())
+      )
     );
-    // return (
-    //   this.strokeEnabled() &&
-    //   this.strokeWidth() &&
-    //   !!(this.stroke() || this.strokeLinearGradientColorStops())
-    //   // this.getStrokeRadialGradientColorStops()
-    // );
   }
   hasHitStroke() {
     const width = this.hitStrokeWidth();
@@ -916,6 +904,16 @@ Shape.prototype.on(
 Shape.prototype.on(
   'shadowColorChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
   _clearGetShadowRGBACache
+);
+
+Shape.prototype.on(
+  'fillEnabledChange.konva fillChange.konva fillPatternImageChange.konva fillLinearGradientColorStopsChange.konva fillRadialGradientColorStopsChange.konva',
+  _clearHasFillCache
+);
+
+Shape.prototype.on(
+  'strokeEnabledChange.konva strokeWidthChange.konva strokeChange.konva strokeLinearGradientColorStopsChange.konva',
+  _clearHasStrokeCache
 );
 
 Shape.prototype.on(

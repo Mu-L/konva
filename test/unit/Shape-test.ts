@@ -2531,6 +2531,38 @@ describe('Shape', function () {
     compareLayerAndCanvas(layer, finalCanvas, 200);
   });
 
+  it('hasFill() and hasStroke() follow attribute changes without per-instance listeners', function () {
+    var rect = new Konva.Rect({
+      fill: 'red',
+      stroke: 'black',
+      strokeWidth: 2,
+    });
+    assert.equal(rect.hasFill(), true);
+    assert.equal(rect.hasStroke(), true);
+
+    rect.fillEnabled(false);
+    assert.equal(rect.hasFill(), false);
+    rect.fillEnabled(true);
+    rect.fill(null);
+    assert.equal(rect.hasFill(), false);
+    rect.fillLinearGradientColorStops([0, 'red', 1, 'blue']);
+    assert.equal(rect.hasFill(), true);
+
+    rect.strokeWidth(0);
+    assert.equal(rect.hasStroke(), false);
+    rect.strokeWidth(2);
+    rect.stroke(null);
+    assert.equal(rect.hasStroke(), false);
+    rect.strokeLinearGradientColorStops([0, 'red', 1, 'blue']);
+    assert.equal(rect.hasStroke(), true);
+    rect.strokeEnabled(false);
+    assert.equal(rect.hasStroke(), false);
+
+    // the invalidation is done by prototype listeners, so the node does not
+    // hold listeners of its own for it
+    assert.deepEqual(Object.keys(rect.eventListeners), []);
+  });
+
   it('hasShadow() follows shadowOffsetX and shadowOffsetY changes', function () {
     var rect = new Konva.Rect({ width: 10, height: 10, fill: 'red' });
     assert.equal(rect.hasShadow(), false);
