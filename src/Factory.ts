@@ -194,29 +194,9 @@ export const Factory = {
       // getting
       return this[getter]();
     };
-  },
-  addDeprecatedGetterSetter<T extends Constructor, U extends Attr<T>>(
-    constructor: T,
-    attr: U,
-    def: Value<T, U>,
-    validator: ValidatorFunc<Value<T, U>>
-  ) {
-    Util.error('Adding deprecated ' + attr);
-
-    const method = GET + Util._capitalize(attr);
-
-    const message =
-      attr +
-      ' property is deprecated and will be removed soon. Look at Konva change log for more information.';
-    constructor.prototype[method] = function () {
-      Util.error(message);
-      const val = this.attrs[attr];
-      return val === undefined ? def : val;
-    };
-    Factory.addSetter(constructor, attr, validator, function () {
-      Util.error(message);
-    });
-    Factory.addOverloadedGetterSetter(constructor, attr);
+    // marks the accessor for toObject()
+    accessor._isAttrAccessor = true;
+    constructor.prototype[attr] = accessor;
   },
   backCompat<T extends Constructor>(
     constructor: T,

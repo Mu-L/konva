@@ -42,14 +42,10 @@ export class Circle extends Shape<CircleConfig> {
     return Math.abs(this.radius()) * 2;
   }
   setWidth(width: number) {
-    if (this.radius() !== width / 2) {
-      this.radius(width / 2);
-    }
+    this.radius(width / 2);
   }
   setHeight(height: number) {
-    if (this.radius() !== height / 2) {
-      this.radius(height / 2);
-    }
+    this.radius(height / 2);
   }
 
   radius: GetSet<number, this>;

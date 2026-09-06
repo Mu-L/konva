@@ -27,8 +27,6 @@ function simplifyArray(arr: Array<any>) {
 const COMMA = ',',
   OPEN_PAREN = '(',
   CLOSE_PAREN = ')',
-  OPEN_PAREN_BRACKET = '([',
-  CLOSE_BRACKET_PAREN = '])',
   SEMICOLON = ';',
   DOUBLE_PAREN = '()',
   // EMPTY_STRING = '',
@@ -219,16 +217,10 @@ export class Context {
         if (relaxed) {
           str += DOUBLE_PAREN;
         } else {
-          if (Util._isArray(args[0])) {
-            str += OPEN_PAREN_BRACKET + args.join(COMMA) + CLOSE_BRACKET_PAREN;
-          } else {
-            if (rounded) {
-              args = args.map((a) =>
-                typeof a === 'number' ? Math.floor(a) : a
-              );
-            }
-            str += OPEN_PAREN + args.join(COMMA) + CLOSE_PAREN;
+          if (rounded) {
+            args = args.map((a) => (typeof a === 'number' ? Math.floor(a) : a));
           }
+          str += OPEN_PAREN + args.join(COMMA) + CLOSE_PAREN;
         }
       } else {
         // properties
@@ -678,18 +670,7 @@ export class Context {
    * @name Konva.Context#setLineDash
    */
   setLineDash(segments: number[]) {
-    // works for Chrome and IE11
-    if (this._context.setLineDash) {
-      this._context.setLineDash(segments);
-    } else if ('mozDash' in this._context) {
-      // verified that this works in firefox
-      (this._context as any)['mozDash'] = segments;
-    } else if ('webkitLineDash' in this._context) {
-      // does not currently work for Safari
-      (this._context as any)['webkitLineDash'] = segments;
-    }
-
-    // no support for IE9 and IE10
+    this._context.setLineDash(segments);
   }
   /**
    * getLineDash function.

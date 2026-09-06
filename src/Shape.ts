@@ -132,17 +132,6 @@ function _fillFunc(this: Node, context) {
 function _strokeFunc(context) {
   context.stroke();
 }
-function _fillFuncHit(this: Node, context) {
-  const fillRule = this.attrs.fillRule;
-  if (fillRule) {
-    context.fill(fillRule);
-  } else {
-    context.fill();
-  }
-}
-function _strokeFuncHit(context) {
-  context.stroke();
-}
 
 function _clearHasShadowCache(this: Node) {
   this._clearCache(HAS_SHADOW);
@@ -895,8 +884,9 @@ export class Shape<
 
 Shape.prototype._fillFunc = _fillFunc;
 Shape.prototype._strokeFunc = _strokeFunc;
-Shape.prototype._fillFuncHit = _fillFuncHit;
-Shape.prototype._strokeFuncHit = _strokeFuncHit;
+// the hit graph is filled and stroked the same way as the scene
+Shape.prototype._fillFuncHit = _fillFunc;
+Shape.prototype._strokeFuncHit = _strokeFunc;
 
 Shape.prototype._centroid = false;
 Shape.prototype.nodeType = 'Shape';
