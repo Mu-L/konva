@@ -457,8 +457,8 @@ export class Shape<
     bufferHitCanvas.getContext().clear();
     this.drawHit(bufferHitCanvas, undefined, true);
     const p = bufferHitCanvas.context.getImageData(
-      Math.round(point.x),
-      Math.round(point.y),
+      Math.floor(point.x),
+      Math.floor(point.y),
       1,
       1
     ).data;

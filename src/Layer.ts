@@ -22,21 +22,19 @@ export interface LayerConfig extends ContainerConfig {
 // constants
 const BEFORE_DRAW = 'beforeDraw',
   DRAW = 'draw',
-  /*
-   * 2 - 3 - 4
-   * |       |
-   * 1 - 0   5
-   *         |
-   * 8 - 7 - 6
-   */
-  INTERSECTION_OFFSETS = [
-    { x: 0, y: 0 }, // 0
-    { x: -1, y: -1 }, // 2
-    { x: 1, y: -1 }, // 4
-    { x: 1, y: 1 }, // 6
-    { x: -1, y: 1 }, // 8
-  ],
-  INTERSECTION_OFFSETS_LEN = INTERSECTION_OFFSETS.length;
+  // getIntersection() reads the hit canvas around an edge pixel in blocks
+  // of this radius, doubling it as long as the search goes on
+  HIT_SEARCH_RADIUS = 10,
+  HIT_SEARCH_MAX_DISTANCE = 256;
+
+// the shape drawn at a pixel of the hit graph: an opaque pixel, or an edge
+// pixel that the shape covers by at least half, so that its colour read back
+// premultiplied still rounds to the key of the shape (see getHitColorKey)
+function getHitShape(data: Uint8ClampedArray, i: number) {
+  return data[i + 3] >= 128
+    ? shapes[Util.getHitColorKey(data[i], data[i + 1], data[i + 2])]
+    : undefined;
+}
 
 /**
  * Layer constructor.  Layers are tied to their own canvas element and are used
@@ -339,36 +337,56 @@ export class Layer extends Container<Group | Shape> {
     if (!this.isListening() || !this.isVisible()) {
       return null;
     }
-    // in some cases antialiased area may be bigger than 1px
-    // it is possible if we will cache node, then scale it a lot
-    let spiralSearchDistance = 1;
-    let continueSearch = false;
-    while (true) {
-      for (let i = 0; i < INTERSECTION_OFFSETS_LEN; i++) {
-        const intersectionOffset = INTERSECTION_OFFSETS[i];
-        const obj = this._getIntersection({
-          x: pos.x + intersectionOffset.x * spiralSearchDistance,
-          y: pos.y + intersectionOffset.y * spiralSearchDistance,
-        });
-        const shape = obj.shape;
-        if (shape) {
-          return shape;
-        }
-        // we should continue search if we found antialiased pixel
-        // that means our node somewhere very close
-        continueSearch = !!obj.antialiased;
-        // stop search if found empty pixel
-        if (!obj.antialiased) {
-          break;
+    const hit = this._getIntersection(pos);
+    if (hit.shape) {
+      return hit.shape;
+    }
+    if (!hit.antialiased) {
+      return null;
+    }
+    // the pointer is on the outer part of an edge, or on an opaque pixel with
+    // the colours of two shapes mixed. Walk outward ring by ring to the
+    // nearest pixel that resolves to a shape. The smoothed edge of a cached
+    // node that is scaled up can be many pixels wide, so keep going while the
+    // alpha still rises (the ramp leads into the shape) or the ring holds
+    // mixed pixels. A thin line has a flat alpha, so the search stops at once
+    // instead of walking along it to an unrelated shape nearby
+    const ratio = this.hitCanvas.pixelRatio,
+      cx = Math.floor(pos.x * ratio),
+      cy = Math.floor(pos.y * ratio);
+    const read = (r: number) =>
+      this.hitCanvas.context.getImageData(cx - r, cy - r, r * 2 + 1, r * 2 + 1)
+        .data;
+    let r = HIT_SEARCH_RADIUS,
+      size = r * 2 + 1,
+      data = read(r),
+      previousMax = data[(r * size + r) * 4 + 3];
+    for (let d = 1; d <= HIT_SEARCH_MAX_DISTANCE; d++) {
+      if (d > r) {
+        r = Math.min(HIT_SEARCH_MAX_DISTANCE, r * 2);
+        size = r * 2 + 1;
+        data = read(r);
+      }
+      let max = 0;
+      for (let y = -d; y <= d; y++) {
+        // whole top and bottom rows, only the two side pixels of the others
+        const step = Math.abs(y) === d ? 1 : d * 2;
+        for (let x = -d; x <= d; x += step) {
+          const i = ((y + r) * size + x + r) * 4;
+          const shape = getHitShape(data, i);
+          if (shape) {
+            return shape;
+          }
+          max = Math.max(max, data[i + 3]);
         }
       }
-      // if no shape, and no antialiased pixel, we should end searching
-      if (continueSearch) {
-        spiralSearchDistance += 1;
-      } else {
+      // 255 here is a mixed pixel, as an opaque one resolved above
+      if (max <= previousMax && max !== 255) {
         return null;
       }
+      previousMax = max;
     }
+    return null;
   }
   _getIntersection(pos: Vector2d): { shape?: Shape; antialiased?: boolean } {
     // a non-listening layer keeps its hit canvas released (0x0),
@@ -378,33 +396,19 @@ export class Layer extends Container<Group | Shape> {
     }
     const ratio = this.hitCanvas.pixelRatio;
     const p = this.hitCanvas.context.getImageData(
-      Math.round(pos.x * ratio),
-      Math.round(pos.y * ratio),
+      Math.floor(pos.x * ratio),
+      Math.floor(pos.y * ratio),
       1,
       1
     ).data;
-    const p3 = p[3];
-
-    // fully opaque pixel
-
-    if (p3 === 255) {
-      const colorKey = Util.getHitColorKey(p[0], p[1], p[2]);
-      const shape = shapes[colorKey];
-      if (shape) {
-        return {
-          shape: shape,
-        };
-      }
-      return {
-        antialiased: true,
-      };
-    } else if (p3 > 0) {
-      // antialiased pixel
-      return {
-        antialiased: true,
-      };
+    const shape = getHitShape(p, 0);
+    if (shape) {
+      return { shape };
     }
-    // empty pixel
+    if (p[3] > 0) {
+      // an edge pixel, or an opaque one with the colours of two shapes mixed
+      return { antialiased: true };
+    }
     return {};
   }
   drawScene(can?: SceneCanvas, top?: Node, bufferCanvas?: SceneCanvas) {

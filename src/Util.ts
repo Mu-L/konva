@@ -695,19 +695,17 @@ export const Util = {
     return _isCanvasFarblingActive;
   },
   /**
-   * Get a random color for hit detection (normalized if farbling is active)
+   * Get a random color for hit detection (snapped to the hit color grid)
    * @method
    * @memberof Konva.Util
    * @returns {String} hex color string
    */
   getHitColor(): string {
-    const color = this.getRandomColor();
-    return this.isCanvasFarblingActive()
-      ? this.getSnappedHexColor(color)
-      : color;
+    const channel = () => (Math.random() * 256) | 0;
+    return this.getHitColorKey(channel(), channel(), channel());
   },
   /**
-   * Get hit color key from RGB values (normalized if farbling is active)
+   * Get hit color key from RGB values (snapped to the hit color grid)
    * @method
    * @memberof Konva.Util
    * @param {Number} r - red component (0-255)
@@ -716,30 +714,24 @@ export const Util = {
    * @returns {String} hex color key string
    */
   getHitColorKey(r: number, g: number, b: number): string {
-    if (this.isCanvasFarblingActive()) {
-      r = Math.round(r / 5) * 5;
-      g = Math.round(g / 5) * 5;
-      b = Math.round(b / 5) * 5;
-    }
-    return HASH + this._rgbToHex(r, g, b);
+    // hit colours live on a grid, so a pixel of the hit graph that reads
+    // back slightly off still rounds to the key of its shape: an edge pixel
+    // is stored premultiplied by its alpha and comes back off by up to one
+    // per channel, canvas farbling (Brave) adds a little noise on top
+    const step = this.isCanvasFarblingActive() ? 5 : 3;
+    const snap = (value: number) => Math.round(value / step) * step;
+    return HASH + this._rgbToHex(snap(r), snap(g), snap(b));
   },
   /**
-   * Snap hex color values to end with 0 (normalize for canvas farbling)
+   * Snap a hex color to the hit color grid
    * @method
    * @memberof Konva.Util
    * @param {String} hex - hex color string (e.g., "#ff00ff")
-   * @returns {String} normalized hex color string
+   * @returns {String} snapped hex color string
    */
   getSnappedHexColor(hex: string): string {
-    const rgb = this._hexToRgb(hex);
-    return (
-      HASH +
-      this._rgbToHex(
-        Math.round(rgb.r / 5) * 5,
-        Math.round(rgb.g / 5) * 5,
-        Math.round(rgb.b / 5) * 5
-      )
-    );
+    const { r, g, b } = this._hexToRgb(hex);
+    return this.getHitColorKey(r, g, b);
   },
 
   /**

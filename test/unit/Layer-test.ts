@@ -9,6 +9,7 @@ import {
   Konva,
   loadImage,
   isNode,
+  countCalls,
 } from './test-utils.ts';
 
 describe('Layer', function () {
@@ -542,5 +543,113 @@ describe('Layer', function () {
       }
     });
     layer.batchDraw();
+  });
+
+  it('getIntersection() tests the pixel under the pointer', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var rect = new Konva.Rect({
+      x: 10,
+      y: 10,
+      width: 10,
+      height: 10,
+      fill: 'red',
+    });
+    layer.add(rect);
+    stage.add(layer);
+
+    // the rect covers pixels 10..19
+    assert.equal(layer.getIntersection({ x: 9.6, y: 15 }), null);
+    assert.equal(layer.getIntersection({ x: 19.9, y: 15 }), rect);
+  });
+
+  it('getIntersection() finds an upscaled cached node under its smoothed edge', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var rect = new Konva.Rect({
+      width: 20,
+      height: 20,
+      fill: 'red',
+      scaleX: 10,
+      scaleY: 10,
+    });
+    layer.add(rect);
+    stage.add(layer);
+    rect.cache();
+    layer.draw();
+
+    // the cached hit graph is upscaled with smoothing, so the last pixels
+    // before the visible edge at x = 200 are semi-transparent
+    assert.equal(layer.getIntersection({ x: 199, y: 100 }), rect);
+    assert.equal(layer.getIntersection({ x: 100, y: 199 }), rect);
+    assert.equal(layer.getIntersection({ x: 199, y: 199 }), rect);
+    assert.equal(layer.getIntersection({ x: 205, y: 100 }), null);
+  });
+
+  it('getIntersection() reads a bounded number of pixels on an antialiased area', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    // an unregistered, semi-transparent hit graph over the whole layer
+    const ctx = layer.hitCanvas.context._context;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, stage.width(), stage.height());
+
+    let hit;
+    const reads = countCalls(layer.hitCanvas.context, 'getImageData', () => {
+      hit = layer.getIntersection({
+        x: stage.width() / 2,
+        y: stage.height() / 2,
+      });
+    });
+    assert.equal(hit, null);
+    assert.isAtMost(reads, 2);
+  });
+
+  it('getIntersection() does not attribute a thin line to a shape next to it', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    // a 1px line at an integer x has no opaque pixel in the hit graph
+    var line = new Konva.Line({
+      points: [40, 20, 40, 180],
+      stroke: 'black',
+      strokeWidth: 1,
+    });
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'red',
+    });
+    layer.add(line, rect);
+    stage.add(layer);
+
+    assert.notEqual(layer.getIntersection({ x: 40, y: 100 }), rect);
+    assert.equal(layer.getIntersection({ x: 100, y: 100 }), rect);
+  });
+
+  it('getIntersection() follows the wide smoothed edge of a cached node scaled far up', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({
+      x: 0,
+      y: 100,
+      radius: 5,
+      fill: 'red',
+      scaleX: 30,
+      scaleY: 30,
+    });
+    layer.add(circle);
+    stage.add(layer);
+    circle.cache();
+    layer.draw();
+
+    // the visible edge is at x = 150; the smoothed hit edge is ~30px wide
+    assert.equal(layer.getIntersection({ x: 147, y: 100 }), circle);
+    assert.equal(layer.getIntersection({ x: 135, y: 100 }), circle);
+    assert.equal(layer.getIntersection({ x: 110, y: 100 }), circle);
+    assert.equal(layer.getIntersection({ x: 170, y: 100 }), null);
   });
 });
