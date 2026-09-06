@@ -334,6 +334,9 @@ export class Text extends Shape<TextConfig> {
     const fillStyleBefore = charRenderFunc ? context.fillStyle : undefined;
     const strokeStyleBefore = charRenderFunc ? context.strokeStyle : undefined;
 
+    // global grapheme index passed to charRenderFunc, runs across lines
+    let charIndex = 0;
+
     // draw text lines
     for (n = 0; n < textArrLen; n++) {
       let lineTranslateX = 0;
@@ -403,15 +406,10 @@ export class Text extends Shape<TextConfig> {
           this._partialTextX = lineTranslateX;
           this._partialTextY = translateY + lineTranslateY;
           this._partialText = letter;
+          const letterWidth = this.measureSize(letter).width;
 
           if (charRenderFunc) {
             context.save();
-            const previousLines = textArr.slice(0, n);
-            const previousGraphemes = previousLines.reduce(
-              (acc, line) => acc + stringToArray(line.text).length,
-              0
-            );
-            const charIndex = li + previousGraphemes;
             charRenderFunc({
               char: letter,
               index: charIndex,
@@ -420,7 +418,7 @@ export class Text extends Shape<TextConfig> {
               lineIndex: n,
               column: li,
               isLastInLine: lastLine,
-              width: this.measureSize(letter).width,
+              width: letterWidth,
               context,
             });
             // a style the callback set on the context wins for this character;
@@ -441,7 +439,8 @@ export class Text extends Shape<TextConfig> {
             this._partialStrokeStyle = undefined;
             context.restore();
           }
-          lineTranslateX += this.measureSize(letter).width + letterSpacing;
+          lineTranslateX += letterWidth + letterSpacing;
+          charIndex++;
         }
       } else {
         if (letterSpacing !== 0) {

@@ -10,6 +10,7 @@ import {
   isBrowser,
   compareCanvases,
 } from './test-utils.ts';
+import { stringToArray } from '../../src/shapes/Text.ts';
 
 export function getOffsetY(
   context: CanvasRenderingContext2D,
@@ -2109,6 +2110,35 @@ describe('Text', function () {
       data[3],
       0,
       'pixel should be fully transparent when opacity is 0'
+    );
+  });
+
+  it('charRenderFunc index is a running grapheme index across lines', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    const indexes: number[] = [];
+    var text = new Konva.Text({
+      text: 'a😀b cd\nef 😀g',
+      fontSize: 20,
+      width: 60,
+      wrap: 'word',
+      charRenderFunc: function (props) {
+        indexes.push(props.index);
+      },
+    });
+    layer.add(text);
+    layer.draw();
+
+    assert.isAbove(text.textArr.length, 2, 'text wraps to several lines');
+    const graphemes = text.textArr.reduce(
+      (acc, line) => acc + stringToArray(line.text).length,
+      0
+    );
+    assert.deepEqual(
+      indexes,
+      Array.from({ length: graphemes }, (_, i) => i)
     );
   });
 });
