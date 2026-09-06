@@ -167,7 +167,6 @@ export type NodeConfig = {
 // CONSTANTS
 const ABSOLUTE_OPACITY = 'absoluteOpacity',
   ABSOLUTE_TRANSFORM = 'absoluteTransform',
-  CANVAS = 'canvas',
   CHANGE = 'Change',
   CHILDREN = 'children',
   KONVA = 'konva',
@@ -274,6 +273,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   index = 0;
   parent: Container | null = null;
   _cache: Map<string, any> = new Map<string, any>();
+  // canvases of cache(), see _getCanvasCache()
+  _canvasCache: {
+    scene: SceneCanvas;
+    filter: SceneCanvas;
+    hit: HitCanvas | null;
+    hitConfig: { pixelRatio: number; width: number; height: number };
+    x: number;
+    y: number;
+  } | null = null;
   _attachedDepsListeners: Map<string, boolean> = new Map<string, boolean>();
   _lastPos: Vector2d | null = null;
   _attrsAffectingSize!: string[];
@@ -317,6 +325,18 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       this._cache.clear();
     }
   }
+  // drop the cached canvases and give their memory back
+  _releaseCanvasCache() {
+    const cache = this._canvasCache;
+    if (cache) {
+      Util.releaseCanvas(
+        cache.scene._canvas,
+        cache.filter._canvas,
+        ...(cache.hit ? [cache.hit._canvas] : [])
+      );
+      this._canvasCache = null;
+    }
+  }
   _getCache(attr: string, privateGetter: Function) {
     let cache = this._cache.get(attr);
 
@@ -350,7 +370,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
 
   _getCanvasCache() {
-    return this._cache.get(CANVAS);
+    return this._canvasCache;
   }
   /*
    * when the logic for a cached result depends on ancestor propagation, use this
@@ -386,16 +406,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.clearCache();
    */
   clearCache() {
-    if (this._cache.has(CANVAS)) {
-      const { scene, filter, hit } = this._cache.get(CANVAS);
-      Util.releaseCanvas(
-        scene._canvas,
-        filter._canvas,
-        ...(hit ? [hit._canvas] : [])
-      );
-      this._cache.delete(CANVAS);
-    }
-
+    this._releaseCanvasCache();
     this._clearSelfAndDescendantCache();
     this._requestDraw();
     return this;
@@ -522,7 +533,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     cachedSceneCanvas.isCache = true;
 
-    this._cache.delete(CANVAS);
+    this._releaseCanvasCache();
     this._filterUpToDate = false;
 
     if (conf.imageSmoothingEnabled === false) {
@@ -558,7 +569,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // the buffer is only needed while drawing
     Util.releaseCanvas(bufferCanvas._canvas);
 
-    this._cache.set(CANVAS, {
+    this._canvasCache = {
       scene: cachedSceneCanvas,
       filter: cachedFilterCanvas,
       // the hit canvas is built on demand (see _getCachedHitCanvas)
@@ -570,7 +581,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       },
       x: x,
       y: y,
-    });
+    };
 
     this._requestDraw();
 
@@ -611,7 +622,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @returns {Boolean}
    */
   isCached() {
-    return this._cache.has(CANVAS);
+    return !!this._canvasCache;
   }
 
   abstract drawScene(canvas?: Canvas, top?: Node, bufferCanvas?: Canvas): void;
@@ -697,7 +708,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     context._applyOpacity(this);
     context._applyGlobalCompositeOperation(this);
 
-    const canvasCache = this._getCanvasCache();
+    const canvasCache = this._getCanvasCache()!;
     context.translate(canvasCache.x, canvasCache.y);
 
     const cacheCanvas = this._getCachedSceneCanvas();
@@ -713,7 +724,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     context.restore();
   }
   _drawCachedHitCanvas(context: Context, hitCanvas: HitCanvas) {
-    const canvasCache = this._getCanvasCache();
+    const canvasCache = this._getCanvasCache()!;
     context.save();
     context.translate(canvasCache.x, canvasCache.y);
     context.drawImage(
@@ -727,7 +738,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
   _getCachedSceneCanvas() {
     let filters = this.filters(),
-      cachedCanvas = this._getCanvasCache(),
+      cachedCanvas = this._getCanvasCache()!,
       sceneCanvas = cachedCanvas.scene as Canvas,
       filterCanvas = cachedCanvas.filter as Canvas,
       filterContext = filterCanvas.getContext(),

@@ -169,6 +169,22 @@ export function compareLayers(layer1: Layer, layer2: Layer, tol?, secondTol?) {
   );
 }
 
+// records the bitmap size of every canvas allocation made while fn runs
+export function collectCanvasAllocations(fn: () => void) {
+  const allocations: Array<{ canvas: any; width: number; height: number }> = [];
+  const originalSetSize = Konva.Canvas.prototype.setSize;
+  Konva.Canvas.prototype.setSize = function (width, height) {
+    originalSetSize.call(this, width, height);
+    allocations.push({ canvas: this, width: this.width, height: this.height });
+  };
+  try {
+    fn();
+  } finally {
+    Konva.Canvas.prototype.setSize = originalSetSize;
+  }
+  return allocations.filter(({ width }) => width > 0);
+}
+
 export function createCanvasAndContext() {
   const canvas = Konva.Util.createCanvasElement();
   canvas.width = 578 * Konva.pixelRatio;
@@ -405,8 +421,8 @@ export const assertAlmostEqual = function (val1, val2, tol = 0.000001) {
   }
 };
 
-export const assertAlmostDeepEqual = function (obj1, obj2) {
+export const assertAlmostDeepEqual = function (obj1, obj2, tol?) {
   for (var key1 in obj1) {
-    assertAlmostEqual(obj1[key1], obj2[key1]);
+    assertAlmostEqual(obj1[key1], obj2[key1], tol);
   }
 };

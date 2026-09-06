@@ -9,6 +9,7 @@ import {
   createCanvasAndContext,
   loadImage,
   getPixelRatio,
+  collectCanvasAllocations,
 } from './test-utils.ts';
 
 describe('Caching', function () {
@@ -820,7 +821,7 @@ describe('Caching', function () {
     group.add(circle);
     group.cache();
 
-    const canvas = group._cache.get('canvas').scene;
+    const canvas = group._getCanvasCache().scene;
     assert.equal(canvas.width, 106 * canvas.pixelRatio);
   });
 
@@ -1279,13 +1280,18 @@ describe('Caching', function () {
     maskgroup.add(mask);
 
     maskgroup.cache();
-    var canvasBefore = maskgroup._cache.get('canvas').scene._canvas;
+    // re-caching releases the previous canvas, so keep a copy of it
+    var canvasBefore = maskgroup._getCanvasCache().scene._canvas;
+    const copyBefore = Konva.Util.createCanvasElement();
+    copyBefore.width = canvasBefore.width;
+    copyBefore.height = canvasBefore.height;
+    copyBefore.getContext('2d')!.drawImage(canvasBefore, 0, 0);
 
     maskgroup.globalCompositeOperation('destination-in');
     maskgroup.cache();
-    var canvasAfter = maskgroup._cache.get('canvas').scene._canvas;
+    var canvasAfter = maskgroup._getCanvasCache().scene._canvas;
 
-    compareCanvases(canvasBefore, canvasAfter);
+    compareCanvases(copyBefore, canvasAfter);
 
     maskgroup.clearCache();
 
@@ -1395,7 +1401,7 @@ describe('Caching', function () {
 
     layer.draw();
     assert.equal(
-      bigCircle._cache.get('canvas').scene.getContext()._context
+      bigCircle._getCanvasCache().scene.getContext()._context
         .imageSmoothingEnabled,
       false
     );
@@ -1449,16 +1455,16 @@ describe('Caching', function () {
     layer.add(circle);
     circle.cache();
 
-    assert.equal(circle._cache.get('canvas').filter.width, 0);
+    assert.equal(circle._getCanvasCache().filter.width, 0);
     circle.filters([Konva.Filters.Blur]);
     layer.draw();
     assert.equal(
-      circle._cache.get('canvas').filter.width,
-      20 * circle._cache.get('canvas').filter.pixelRatio
+      circle._getCanvasCache().filter.width,
+      20 * circle._getCanvasCache().filter.pixelRatio
     );
     circle.filters([]);
     // TODO: should we clear cache canvas?
-    // assert.equal(circle._cache.get('canvas').filter.width, 0);
+    // assert.equal(circle._getCanvasCache().filter.width, 0);
   });
 
   it('hit from cache + global composite', function (done) {
@@ -1516,7 +1522,7 @@ describe('Caching', function () {
     });
     layer.draw();
 
-    var hitCanvas = rect._cache.get('canvas').hit;
+    var hitCanvas = rect._getCanvasCache().hit;
     assert.equal(hitCanvas._canvas.width, rect.width() * 0.2);
     assert.equal(hitCanvas._canvas.height, rect.height() * 0.2);
     assert.equal(hitCanvas.pixelRatio, 0.2);
@@ -1710,27 +1716,6 @@ describe('Caching', function () {
     assert.equal(stage.getIntersection({ x: 20, y: 20 }), null);
   });
 
-  // records the bitmap size of every canvas allocation made while fn runs
-  function collectCanvasAllocations(fn: () => void) {
-    const allocations: Array<{ canvas: any; width: number; height: number }> =
-      [];
-    const originalSetSize = Konva.Canvas.prototype.setSize;
-    Konva.Canvas.prototype.setSize = function (width, height) {
-      originalSetSize.call(this, width, height);
-      allocations.push({
-        canvas: this,
-        width: this.width,
-        height: this.height,
-      });
-    };
-    try {
-      fn();
-    } finally {
-      Konva.Canvas.prototype.setSize = originalSetSize;
-    }
-    return allocations.filter(({ width }) => width > 0);
-  }
-
   it('cache() allocates only the cache canvas when no shape needs the buffer', function () {
     // geometry far from the node's own origin used to inflate the buffer
     // canvas by the offset (5100x5100 for a 102x102 cache)
@@ -1806,5 +1791,35 @@ describe('Caching', function () {
 
     rect.position({ x: 0, y: 0 });
     compareCanvases(exported, rect.toCanvas(), 10);
+  });
+
+  it('clearCache() on a parent keeps the caches of its children', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var group = new Konva.Group();
+    var rect = new Konva.Rect({
+      width: 50,
+      height: 50,
+      fill: 'red',
+      filters: [Konva.Filters.Invert],
+    });
+    group.add(rect);
+    layer.add(group);
+    stage.add(layer);
+    rect.cache();
+
+    group.clearCache();
+
+    assert.equal(rect.isCached(), true);
+  });
+
+  it('cache() releases the canvases of the previous cache', function () {
+    var rect = new Konva.Rect({ width: 50, height: 50, fill: 'red' });
+    rect.cache();
+    const previous = rect._getCanvasCache().scene;
+
+    rect.cache();
+
+    assert.equal(previous._canvas.width, 0, 'previous scene canvas released');
   });
 });
