@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+- Reduced memory usage of `node.cache()` and of `toCanvas()`/`toDataURL()`/`toImage()`/`toBlob()`. The temporary "perfect drawing" buffer canvas was sized by the node's distance from its origin (a 100x100 shape at `x: 5000` allocated a 5100x5100 buffer, hundreds of megabytes on retina displays) and the export buffer was never released. The buffer is now the size of the cache or export, allocated only when a shape actually needs it (fill + stroke with opacity, or with a shadow), and released right after drawing. Note: a cropped export (`toCanvas({ x, y, width, height })`) no longer includes shadows cast into the crop by such shapes lying fully outside of it, which matches on-screen rendering
+- Fixed `charRenderFunc` of `Konva.Text` making a draw quadratic in text length (21 s for ~10k characters). Every character re-counted the graphemes of all previous lines, and every glyph was measured twice
+- Fixed a canvas element being created and leaked on every draw of a node with CSS filter strings, once per filter. The `ctx.filter` support probe is now memoized
+- A chain of filter functions uploads the image data once instead of after every filter, and changing a filter attribute no longer reallocates the filter canvas when its size is unchanged
+- Fixed `Konva.Sprite` keeping its frame interval running after `destroy()`
+- Removed unused `Konva.Node` internals (`_setComponentAttr`, the `allEventListeners` and `absoluteScale` cache keys)
+
 ## 10.3.3 (2026-09-04)
 
 - No code changes. Updated npm package metadata (description, keywords, homepage) and README to describe what Konva is used for and to point at Polotno for a complete design editor built on Konva
