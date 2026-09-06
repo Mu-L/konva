@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 
-import { addStage, Konva } from './test-utils.ts';
+import { addStage, Konva, compareLayers } from './test-utils.ts';
 
 describe('Wedge', function () {
   // ======================================================
@@ -82,5 +82,27 @@ describe('Wedge', function () {
       width: 140,
       height: 140,
     });
+  });
+
+  it('negative radius draws as its absolute value', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer.add(
+      new Konva.Wedge({ x: 100, y: 100, fill: 'green', radius: 40, angle: 120 })
+    );
+    layer2.add(
+      new Konva.Wedge({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        radius: -40,
+        angle: 120,
+      })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
   });
 });

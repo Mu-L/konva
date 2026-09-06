@@ -44,16 +44,16 @@ export class Arc extends Shape<ArcConfig> {
       clockwise = this.clockwise();
 
     context.beginPath();
-    context.arc(0, 0, this.outerRadius(), 0, angle, clockwise);
-    context.arc(0, 0, this.innerRadius(), angle, 0, !clockwise);
+    context.arc(0, 0, Math.abs(this.outerRadius()), 0, angle, clockwise);
+    context.arc(0, 0, Math.abs(this.innerRadius()), angle, 0, !clockwise);
     context.closePath();
     context.fillStrokeShape(this);
   }
   getWidth() {
-    return this.outerRadius() * 2;
+    return Math.abs(this.outerRadius()) * 2;
   }
   getHeight() {
-    return this.outerRadius() * 2;
+    return Math.abs(this.outerRadius()) * 2;
   }
   setWidth(width: number) {
     this.outerRadius(width / 2);
@@ -63,8 +63,8 @@ export class Arc extends Shape<ArcConfig> {
   }
 
   getSelfRect() {
-    const innerRadius = this.innerRadius();
-    const outerRadius = this.outerRadius();
+    const innerRadius = Math.abs(this.innerRadius());
+    const outerRadius = Math.abs(this.outerRadius());
     const clockwise = this.clockwise();
 
     // canvas draws a full circle for any non-zero full-turn end angle regardless

@@ -5,6 +5,7 @@ import {
   Konva,
   createCanvasAndContext,
   compareLayerAndCanvas,
+  compareLayers,
 } from './test-utils.ts';
 
 describe('Ellipse', function () {
@@ -111,5 +112,33 @@ describe('Ellipse', function () {
     context.lineWidth = 8;
     context.stroke();
     compareLayerAndCanvas(layer, canvas, 150);
+  });
+
+  it('negative radii draws as its absolute value', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer.add(
+      new Konva.Ellipse({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        radiusX: 40,
+        radiusY: 20,
+      })
+    );
+    layer2.add(
+      new Konva.Ellipse({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        radiusX: -40,
+        radiusY: -20,
+      })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
   });
 });

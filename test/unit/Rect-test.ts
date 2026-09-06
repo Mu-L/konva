@@ -5,6 +5,7 @@ import {
   Konva,
   createCanvasAndContext,
   compareLayerAndCanvas,
+  compareLayers,
 } from './test-utils.ts';
 
 describe('Rect', function () {
@@ -253,5 +254,24 @@ describe('Rect', function () {
       trace,
       'clearRect(0,0,578,200);save();transform(1,0,0,1,100,100);beginPath();moveTo(-100,-100);lineTo(-10,-100);arc(-10,-90,10,4.712,0,false);lineTo(0,-20);arc(-20,-20,20,0,1.571,false);lineTo(-70,0);arc(-70,-30,30,1.571,3.142,false);lineTo(-100,-100);arc(-100,-100,0,3.142,4.712,false);closePath();fillStyle=black;fill();restore();clearRect(0,0,578,200);save();transform(1,0,0,1,100,100);beginPath();moveTo(-100,-100);lineTo(-10,-100);arc(-10,-90,10,4.712,0,false);lineTo(0,-20);arc(-20,-20,20,0,1.571,false);lineTo(-70,0);arc(-70,-30,30,1.571,3.142,false);lineTo(-100,-100);arc(-100,-100,0,3.142,4.712,false);closePath();fillStyle=black;fill();restore();'
     );
+  });
+
+  it('negative cornerRadius draws as no rounding', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    var attrs = { x: 50, y: 50, width: 100, height: 60, fill: 'green' };
+    layer.add(new Konva.Rect({ ...attrs, cornerRadius: 0 }));
+    layer.add(
+      new Konva.Rect({ ...attrs, y: 120, cornerRadius: [0, 10, 0, 10] })
+    );
+    layer2.add(new Konva.Rect({ ...attrs, cornerRadius: -10 }));
+    layer2.add(
+      new Konva.Rect({ ...attrs, y: 120, cornerRadius: [-5, 10, -5, 10] })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
   });
 });

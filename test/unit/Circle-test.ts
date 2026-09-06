@@ -6,6 +6,7 @@ import {
   createCanvasAndContext,
   compareLayerAndCanvas,
   loadImage,
+  compareLayers,
 } from './test-utils.ts';
 
 describe('Circle', function () {
@@ -314,5 +315,37 @@ describe('Circle', function () {
     context.lineWidth = 4;
     context.stroke();
     compareLayerAndCanvas(layer, canvas, 100);
+  });
+
+  it('negative radius can be cached and hit', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({
+      x: 100,
+      y: 100,
+      radius: -30,
+      fill: 'green',
+    });
+    layer.add(circle);
+    stage.add(layer);
+
+    assert.deepEqual(circle.size(), { width: 60, height: 60 });
+    circle.cache();
+    layer.draw();
+    assert.equal(stage.getIntersection({ x: 100, y: 100 }), circle);
+  });
+
+  it('negative radius draws as its absolute value', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer.add(new Konva.Circle({ x: 100, y: 100, fill: 'green', radius: 30 }));
+    layer2.add(
+      new Konva.Circle({ x: 100, y: 100, fill: 'green', radius: -30 })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
   });
 });

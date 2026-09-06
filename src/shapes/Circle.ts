@@ -31,15 +31,15 @@ export interface CircleConfig extends ShapeConfig {
 export class Circle extends Shape<CircleConfig> {
   _sceneFunc(context: Context) {
     context.beginPath();
-    context.arc(0, 0, this.attrs.radius || 0, 0, Math.PI * 2, false);
+    context.arc(0, 0, Math.abs(this.attrs.radius || 0), 0, Math.PI * 2, false);
     context.closePath();
     context.fillStrokeShape(this);
   }
   getWidth() {
-    return this.radius() * 2;
+    return Math.abs(this.radius()) * 2;
   }
   getHeight() {
-    return this.radius() * 2;
+    return Math.abs(this.radius()) * 2;
   }
   setWidth(width: number) {
     if (this.radius() !== width / 2) {

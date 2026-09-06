@@ -89,4 +89,32 @@ describe('Ring', function () {
 
     compareLayers(layer, layer2);
   });
+
+  it('negative radii draws as its absolute value', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer.add(
+      new Konva.Ring({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        innerRadius: 20,
+        outerRadius: 40,
+      })
+    );
+    layer2.add(
+      new Konva.Ring({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        innerRadius: -20,
+        outerRadius: -40,
+      })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
+  });
 });

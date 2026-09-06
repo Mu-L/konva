@@ -6,6 +6,7 @@ import {
   createCanvasAndContext,
   compareLayerAndCanvas,
   assertAlmostDeepEqual,
+  compareLayers,
 } from './test-utils.ts';
 
 describe('Arc', function () {
@@ -277,5 +278,35 @@ describe('Arc', function () {
     context.lineWidth = 4;
     context.stroke();
     compareLayerAndCanvas(layer, canvas, 10);
+  });
+
+  it('negative radii draws as its absolute value', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var layer2 = new Konva.Layer();
+    layer.add(
+      new Konva.Arc({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        innerRadius: 20,
+        outerRadius: 40,
+        angle: 120,
+      })
+    );
+    layer2.add(
+      new Konva.Arc({
+        x: 100,
+        y: 100,
+        fill: 'green',
+        innerRadius: -20,
+        outerRadius: -40,
+        angle: 120,
+      })
+    );
+    stage.add(layer);
+    stage.add(layer2);
+
+    compareLayers(layer, layer2, 10);
   });
 });

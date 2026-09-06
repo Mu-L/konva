@@ -42,7 +42,7 @@ export class Wedge extends Shape<WedgeConfig> {
     context.arc(
       0,
       0,
-      this.radius(),
+      Math.abs(this.radius()),
       0,
       Konva.getAngle(this.angle()),
       this.clockwise()
@@ -52,10 +52,10 @@ export class Wedge extends Shape<WedgeConfig> {
     context.fillStrokeShape(this);
   }
   getWidth() {
-    return this.radius() * 2;
+    return Math.abs(this.radius()) * 2;
   }
   getHeight() {
-    return this.radius() * 2;
+    return Math.abs(this.radius()) * 2;
   }
   setWidth(width: number) {
     this.radius(width / 2);

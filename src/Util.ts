@@ -516,6 +516,11 @@ const HUE_UNITS: Record<string, number> = {
  * @namespace Util
  * @memberof Konva
  */
+// a negative corner radius would throw in context.arc()
+function clampRadius(radius: number, max: number) {
+  return Math.min(Math.max(radius || 0, 0), max);
+}
+
 export const Util = {
   /*
    * cherry-picked utilities from underscore.js
@@ -1087,9 +1092,11 @@ export const Util = {
     obj.visitedByCircularReferenceRemoval = true;
 
     for (const key in obj) {
-      if (
-        !(obj.hasOwnProperty(key) && obj[key] && typeof obj[key] == 'object')
-      ) {
+      if (!(
+        obj.hasOwnProperty(key) &&
+        obj[key] &&
+        typeof obj[key] == 'object'
+      )) {
         continue;
       }
       desc = Object.getOwnPropertyDescriptor(obj, key);
@@ -1137,6 +1144,24 @@ export const Util = {
       c.width = 0;
       c.height = 0;
     });
+  },
+  // [topLeft, topRight, bottomRight, bottomLeft] radii that fit the box
+  _cornerRadii(
+    cornerRadius: number | number[],
+    width: number,
+    height: number
+  ): [number, number, number, number] {
+    const max = Math.min(width, height) / 2;
+    if (typeof cornerRadius === 'number') {
+      const radius = clampRadius(cornerRadius, max);
+      return [radius, radius, radius, radius];
+    }
+    return [
+      clampRadius(cornerRadius[0], max),
+      clampRadius(cornerRadius[1], max),
+      clampRadius(cornerRadius[2], max),
+      clampRadius(cornerRadius[3], max),
+    ];
   },
   drawRoundedRectPath(
     context: Context,

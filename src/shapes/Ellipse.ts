@@ -32,8 +32,8 @@ export interface EllipseConfig extends ShapeConfig {
  */
 export class Ellipse extends Shape<EllipseConfig> {
   _sceneFunc(context: Context) {
-    const rx = this.radiusX(),
-      ry = this.radiusY();
+    const rx = Math.abs(this.radiusX()),
+      ry = Math.abs(this.radiusY());
 
     context.beginPath();
     context.save();
@@ -46,10 +46,10 @@ export class Ellipse extends Shape<EllipseConfig> {
     context.fillStrokeShape(this);
   }
   getWidth() {
-    return this.radiusX() * 2;
+    return Math.abs(this.radiusX()) * 2;
   }
   getHeight() {
-    return this.radiusY() * 2;
+    return Math.abs(this.radiusY()) * 2;
   }
   setWidth(width: number) {
     this.radiusX(width / 2);
