@@ -1174,22 +1174,11 @@ export const Util = {
     let yOrigin = height < 0 ? height : 0;
     width = Math.abs(width);
     height = Math.abs(height);
-    let topLeft = 0;
-    let topRight = 0;
-    let bottomLeft = 0;
-    let bottomRight = 0;
-    if (typeof cornerRadius === 'number') {
-      topLeft =
-        topRight =
-        bottomLeft =
-        bottomRight =
-          Math.min(cornerRadius, width / 2, height / 2);
-    } else {
-      topLeft = Math.min(cornerRadius[0] || 0, width / 2, height / 2);
-      topRight = Math.min(cornerRadius[1] || 0, width / 2, height / 2);
-      bottomRight = Math.min(cornerRadius[2] || 0, width / 2, height / 2);
-      bottomLeft = Math.min(cornerRadius[3] || 0, width / 2, height / 2);
-    }
+    const [topLeft, topRight, bottomRight, bottomLeft] = Util._cornerRadii(
+      cornerRadius,
+      width,
+      height
+    );
     context.moveTo(xOrigin + topLeft, yOrigin);
     context.lineTo(xOrigin + width - topRight, yOrigin);
     context.arc(
