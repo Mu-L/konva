@@ -3890,4 +3890,21 @@ describe('Node', function () {
 
     assert.deepEqual(rect.position(), { x: 5, y: 5 });
   });
+
+  it('a throwing setter inside setAttrs() does not freeze the transform cache', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var rect = new Konva.Rect({ width: 50, height: 50, fill: 'red' });
+    layer.add(rect);
+    stage.add(layer);
+    assert.equal(rect.getAbsolutePosition().x, 0);
+
+    (rect as any).setBroken = function () {
+      throw new Error('setter failed');
+    };
+    assert.throws(() => rect.setAttrs({ broken: 1 }), 'setter failed');
+
+    rect.x(100);
+    assert.equal(rect.getAbsolutePosition().x, 100);
+  });
 });

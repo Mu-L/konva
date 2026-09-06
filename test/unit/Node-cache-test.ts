@@ -1822,4 +1822,35 @@ describe('Caching', function () {
 
     assert.equal(previous._canvas.width, 0, 'previous scene canvas released');
   });
+
+  it('cache() restores the opacity handling when drawing throws', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var group = new Konva.Group({ opacity: 0.5 });
+    var rect = new Konva.Rect({ width: 50, height: 50, fill: 'red' });
+    // throws once: the later opacity() change schedules a redraw
+    var armed = false;
+    var broken = new Konva.Shape({
+      width: 50,
+      height: 50,
+      sceneFunc: function () {
+        if (armed) {
+          armed = false;
+          throw new Error('sceneFunc failed');
+        }
+      },
+    });
+    group.add(rect, broken);
+    layer.add(group);
+    stage.add(layer);
+
+    armed = true;
+    assert.throws(() => group.cache(), 'sceneFunc failed');
+
+    assert.equal(group._isUnderCache, false);
+    assert.equal(rect.getAbsoluteOpacity(), 0.5);
+    group.opacity(0.25);
+    assert.equal(rect.getAbsoluteOpacity(), 0.25);
+    assert.equal(group.isCached(), false);
+  });
 });

@@ -548,10 +548,19 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     this._isUnderCache = true;
     this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
 
-    this.drawScene(cachedSceneCanvas, this, bufferCanvas);
-    this._isUnderCache = false;
-
-    sceneContext.restore();
+    try {
+      this.drawScene(cachedSceneCanvas, this, bufferCanvas);
+    } catch (e) {
+      Util.releaseCanvas(cachedSceneCanvas._canvas);
+      throw e;
+    } finally {
+      this._isUnderCache = false;
+      // descendants cached their opacity relative to this node while drawing
+      this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
+      sceneContext.restore();
+      // the buffer is only needed while drawing
+      Util.releaseCanvas(bufferCanvas._canvas);
+    }
 
     // this will draw a red border around the cached box for
     // debugging purposes
@@ -565,9 +574,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       sceneContext.stroke();
       sceneContext.restore();
     }
-
-    // the buffer is only needed while drawing
-    Util.releaseCanvas(bufferCanvas._canvas);
 
     this._canvasCache = {
       scene: cachedSceneCanvas,
@@ -1339,13 +1345,16 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   // so it work faster
   _batchTransformChanges(func) {
     this._batchingTransformChange = true;
-    func();
-    this._batchingTransformChange = false;
-    if (this._needClearTransformCache) {
-      this._clearCache(TRANSFORM);
-      this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
+    try {
+      func();
+    } finally {
+      this._batchingTransformChange = false;
+      if (this._needClearTransformCache) {
+        this._needClearTransformCache = false;
+        this._clearCache(TRANSFORM);
+        this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
+      }
     }
-    this._needClearTransformCache = false;
   }
 
   setPosition(pos: Vector2d) {
