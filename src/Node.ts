@@ -166,9 +166,7 @@ export type NodeConfig = {
 
 // CONSTANTS
 const ABSOLUTE_OPACITY = 'absoluteOpacity',
-  ALL_LISTENERS = 'allEventListeners',
   ABSOLUTE_TRANSFORM = 'absoluteTransform',
-  ABSOLUTE_SCALE = 'absoluteScale',
   CANVAS = 'canvas',
   CHANGE = 'Change',
   CHILDREN = 'children',
@@ -180,7 +178,14 @@ const ABSOLUTE_OPACITY = 'absoluteOpacity',
   POINTERLEAVE = 'pointerleave',
   TOUCHENTER = 'touchenter',
   TOUCHLEAVE = 'touchleave',
-  NAME = 'name',
+  NON_BUBBLING_EVENTS = [
+    MOUSEENTER,
+    MOUSELEAVE,
+    POINTERENTER,
+    POINTERLEAVE,
+    TOUCHENTER,
+    TOUCHLEAVE,
+  ],
   SET = 'set',
   SHAPE = 'Shape',
   SPACE = ' ',
@@ -267,7 +272,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   } = {};
   attrs: any = {};
   index = 0;
-  _allEventListeners: null | Array<Function> = null;
   parent: Container | null = null;
   _cache: Map<string, any> = new Map<string, any>();
   _attachedDepsListeners: Map<string, boolean> = new Map<string, boolean>();
@@ -890,9 +894,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     const evtStr = args[0];
     const selectorOrHandler = args[1];
     const handler = args[2];
-    if (this._cache) {
-      this._cache.delete(ALL_LISTENERS);
-    }
 
     if (args.length === 3) {
       return this._delegate.apply(this, args as any);
@@ -951,8 +952,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       parts,
       baseEvent,
       name;
-
-    this._cache && this._cache.delete(ALL_LISTENERS);
 
     if (!evtStr) {
       // remove all events
@@ -1040,7 +1039,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _clearCaches() {
     this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
     this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
-    this._clearSelfAndDescendantCache(ABSOLUTE_SCALE);
     this._clearSelfAndDescendantCache(STAGE);
     this._clearSelfAndDescendantCache(VISIBLE);
     this._clearSelfAndDescendantCache(LISTENING);
@@ -2490,36 +2488,15 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
     this._requestDraw();
   }
-  _setComponentAttr(key, component, val) {
-    let oldVal;
-    if (val !== undefined) {
-      oldVal = this.attrs[key];
-
-      if (!oldVal) {
-        // set value to default value using getAttr
-        this.attrs[key] = this.getAttr(key);
-      }
-
-      this.attrs[key][component] = val;
-      this._fireChangeEvent(key, oldVal, val);
-    }
-  }
   _fireAndBubble(eventType, evt, compareShape?) {
     if (evt && this.nodeType === SHAPE) {
       evt.target = this;
     }
 
-    const nonBubbling = [
-      MOUSEENTER,
-      MOUSELEAVE,
-      POINTERENTER,
-      POINTERLEAVE,
-      TOUCHENTER,
-      TOUCHLEAVE,
-    ];
+    const nonBubbling = NON_BUBBLING_EVENTS.indexOf(eventType) !== -1;
 
     const shouldStop =
-      nonBubbling.indexOf(eventType) !== -1 &&
+      nonBubbling &&
       ((compareShape &&
         (this === compareShape ||
           (this.isAncestorOf && this.isAncestorOf(compareShape)))) ||
@@ -2530,7 +2507,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
       // simulate event bubbling
       const stopBubble =
-        nonBubbling.indexOf(eventType) !== -1 &&
+        nonBubbling &&
         compareShape &&
         compareShape.isAncestorOf &&
         compareShape.isAncestorOf(this) &&
