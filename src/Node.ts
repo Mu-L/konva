@@ -760,12 +760,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
 
     const ratio = sceneCanvas.pixelRatio;
-    filterCanvas.setSize(
+    filterCanvas.setSizeIfChanged(
       sceneCanvas.width / sceneCanvas.pixelRatio,
       sceneCanvas.height / sceneCanvas.pixelRatio
     );
     if (useNativeOnly) {
       const finalFilter = (filters as unknown as string[]).join(' ');
+      filterContext.clear();
       filterContext.save();
       filterContext.setAttr('filter', finalFilter);
       filterContext.drawImage(
@@ -806,8 +807,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
           filter = parseCSSFilters(filter);
         }
         filter.call(this, imageData);
-        filterContext.putImageData(imageData, 0, 0);
       }
+      filterContext.putImageData(imageData, 0, 0);
     } catch (e: any) {
       Util.error(
         'Unable to apply filter. ' +

@@ -1,3 +1,4 @@
+import { assert } from 'chai';
 import {
   addStage,
   Konva,
@@ -361,5 +362,28 @@ describe('Filter', function () {
 
       done();
     });
+  });
+
+  it('a filter chain uploads the image data once', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var rect = new Konva.Rect({
+      x: 10,
+      y: 10,
+      width: 50,
+      height: 50,
+      fill: 'red',
+    });
+    layer.add(rect);
+    rect.cache();
+    rect.filters([
+      Konva.Filters.Invert,
+      Konva.Filters.Grayscale,
+      Konva.Filters.Brighten,
+    ]);
+    stage.add(layer);
+
+    const trace = rect._getCanvasCache().filter.getContext().getTrace(true);
+    assert.equal(trace.split('putImageData()').length - 1, 1);
   });
 });
