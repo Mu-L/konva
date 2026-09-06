@@ -1,6 +1,7 @@
 import type { Container } from './Container.ts';
 import { Konva } from './Global.ts';
 import type { Node } from './Node.ts';
+import type { Stage } from './Stage.ts';
 import type { Vector2d } from './types.ts';
 import { Util } from './Util.ts';
 
@@ -9,6 +10,8 @@ type DragElement = {
   startPointerPos: Vector2d;
   offset: Vector2d;
   pointerId?: number;
+  // the last bounded position, to skip a move to the same place
+  lastPos?: Vector2d;
   startEvent?: any;
   // when we just put pointer down on a node
   // it will create drag element
@@ -61,6 +64,8 @@ export const DD = {
   // methods
   _drag(evt, win?: Window) {
     const nodesToFireEvents: Array<Node> = [];
+    // reading the positions forces a layout, so do it once per stage
+    const positioned = new Set<Stage>();
     DD._dragElements.forEach((elem, key) => {
       const { node } = elem;
       // we need to find pointer relative to that node
@@ -70,7 +75,10 @@ export const DD = {
       if (win && stage._getOwnerWindow() !== win) {
         return;
       }
-      stage.setPointersPositions(evt);
+      if (!positioned.has(stage)) {
+        stage.setPointersPositions(evt);
+        positioned.add(stage);
+      }
 
       // it is possible that user call startDrag without any event
       // it that case we need to detect first movable pointer and attach it into the node
@@ -125,14 +133,20 @@ export const DD = {
   // setup all in dragbefore, and stop dragging only after pointerup triggered.
   _endDragBefore(evt?, win?: Window) {
     const drawNodes: Array<Container> = [];
+    const positioned = new Set<Stage>();
     DD._dragElements.forEach((elem) => {
       const { node } = elem;
       // we need to find pointer relative to that node
       const stage = node.getStage()!;
       // a pointer released in another window ends the drag too - the pointer
       // is up everywhere - but its position is not used for this stage
-      if (evt && (!win || stage._getOwnerWindow() === win)) {
+      if (
+        evt &&
+        !positioned.has(stage) &&
+        (!win || stage._getOwnerWindow() === win)
+      ) {
         stage.setPointersPositions(evt);
+        positioned.add(stage);
       }
 
       const pos = stage._changedPointerPositions.find(
@@ -154,14 +168,14 @@ export const DD = {
         // state for the pointer family (issue #1756)
         Konva._pointerListenClick = false;
         elem.dragStatus = 'stopped';
-      }
 
-      const drawNode =
-        elem.node.getLayer() ||
-        ((elem.node instanceof Konva['Stage'] && elem.node) as any);
-
-      if (drawNode && drawNodes.indexOf(drawNode) === -1) {
-        drawNodes.push(drawNode);
+        // a node that has not moved needs no redraw
+        const drawNode =
+          elem.node.getLayer() ||
+          ((elem.node instanceof Konva['Stage'] && elem.node) as any);
+        if (drawNode && drawNodes.indexOf(drawNode) === -1) {
+          drawNodes.push(drawNode);
+        }
       }
     });
     // draw in a sync way

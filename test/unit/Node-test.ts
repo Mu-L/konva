@@ -3960,6 +3960,13 @@ describe('Node', function () {
     assert.isUndefined(Konva.Shape.prototype.eventListeners.customChange);
   });
 
+  it('startDrag() on a node outside of a stage is a no-op', function () {
+    var rect = new Konva.Rect({ draggable: true });
+    assert.doesNotThrow(() => rect.startDrag());
+    assert.equal(rect.isDragging(), false);
+    assert.equal(Konva.DD._dragElements.size, 0);
+  });
+
   it('toObject() keeps dates and class instances nested in a custom attribute', function () {
     var date = new Date(0);
     var rect = new Konva.Rect({

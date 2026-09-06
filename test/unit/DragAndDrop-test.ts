@@ -8,6 +8,7 @@ import {
   simulateTouchStart,
   simulateTouchEnd,
   simulateTouchMove,
+  countCalls,
 } from './test-utils.ts';
 
 describe('DragAndDrop', function () {
@@ -1419,5 +1420,84 @@ describe('DragAndDrop', function () {
         done();
       }, 70);
     }, 70);
+  });
+
+  it('a click on a draggable node does not redraw the layer synchronously', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'red',
+      draggable: true,
+    });
+    layer.add(rect);
+    layer.draw();
+
+    var draws = countCalls(layer, 'draw', () => {
+      simulateMouseDown(stage, { x: 100, y: 100 });
+      simulateMouseUp(stage, { x: 100, y: 100 });
+    });
+    assert.equal(draws, 0);
+    assert.equal(Konva.DD._dragElements.size, 0);
+  });
+
+  it('pointer positions are read once per stage per move while dragging several nodes', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect1 = new Konva.Rect({ x: 0, y: 0, width: 50, height: 50 });
+    var rect2 = new Konva.Rect({ x: 100, y: 0, width: 50, height: 50 });
+    layer.add(rect1, rect2);
+
+    rect1.startDrag();
+    rect2.startDrag();
+
+    var calls = countCalls(stage, 'setPointersPositions', () => {
+      simulateMouseMove(stage, { x: 30, y: 30 });
+    });
+    // one read for DD._drag, one for each stage pointermove (pointer + mouse)
+    assert.equal(calls, 3);
+    assert.equal(rect1.isDragging(), true);
+    assert.equal(rect2.isDragging(), true);
+
+    calls = countCalls(stage, 'setPointersPositions', () => {
+      simulateMouseUp(stage, { x: 30, y: 30 });
+    });
+    assert.equal(calls, 3);
+    assert.equal(Konva.DD._dragElements.size, 0);
+  });
+
+  it('a clamping dragBoundFunc does not freeze the node after a programmatic move', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 50,
+      height: 50,
+      fill: 'red',
+      draggable: true,
+      dragBoundFunc: (pos) => ({ x: Math.min(pos.x, 100), y: pos.y }),
+    });
+    layer.add(rect);
+    layer.draw();
+
+    simulateMouseDown(stage, { x: 60, y: 60 });
+    simulateMouseMove(stage, { x: 200, y: 60 });
+    simulateMouseUp(stage, { x: 200, y: 60 });
+    assert.equal(rect.x(), 100);
+
+    rect.x(0);
+    layer.draw();
+
+    simulateMouseDown(stage, { x: 10, y: 60 });
+    simulateMouseMove(stage, { x: 200, y: 60 });
+    simulateMouseUp(stage, { x: 200, y: 60 });
+    assert.equal(rect.x(), 100);
   });
 });

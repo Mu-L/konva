@@ -283,7 +283,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     x: number;
     y: number;
   } | null = null;
-  _lastPos: Vector2d | null = null;
   _attrsAffectingSize!: string[];
   _batchingTransformChange = false;
   _needClearTransformCache = false;
@@ -2679,7 +2678,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       this._createDragElement(evt);
     }
 
-    const elem = DD._dragElements.get(this._id)!;
+    const elem = DD._dragElements.get(this._id);
+    // a node outside of a stage has no pointer to follow
+    if (!elem) {
+      return;
+    }
     elem.dragStatus = 'dragging';
     this.fire(
       'dragstart',
@@ -2719,16 +2722,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }
     }
 
-    if (
-      !this._lastPos ||
-      this._lastPos.x !== newNodePos.x ||
-      this._lastPos.y !== newNodePos.y
-    ) {
+    const lastPos = elem.lastPos;
+    if (!lastPos || lastPos.x !== newNodePos.x || lastPos.y !== newNodePos.y) {
       this.setAbsolutePosition(newNodePos);
       this._requestDraw();
     }
 
-    this._lastPos = newNodePos;
+    elem.lastPos = newNodePos;
   }
 
   /**
