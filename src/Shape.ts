@@ -777,7 +777,14 @@ export class Shape<
       hitHeight = hitCanvas.getHeight();
 
     hitContext.clear();
-    hitContext.drawImage(sceneCanvas._canvas, 0, 0, hitWidth, hitHeight);
+    // the hit context is scaled by its pixel ratio, so it draws logical units
+    hitContext.drawImage(
+      sceneCanvas._canvas,
+      0,
+      0,
+      hitWidth / hitCanvas.pixelRatio,
+      hitHeight / hitCanvas.pixelRatio
+    );
 
     try {
       const hitImageData = hitContext.getImageData(0, 0, hitWidth, hitHeight);

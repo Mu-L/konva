@@ -1853,4 +1853,31 @@ describe('Caching', function () {
     assert.equal(rect.getAbsoluteOpacity(), 0.25);
     assert.equal(group.isCached(), false);
   });
+
+  it('drawHitFromCache() honours hitCanvasPixelRatio', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'green',
+    });
+    layer.add(rect);
+
+    rect.cache({ hitCanvasPixelRatio: 0.5 });
+    rect.drawHitFromCache();
+    layer.draw();
+    assert.equal(layer.getIntersection({ x: 140, y: 140 }), rect);
+    assert.equal(layer.getIntersection({ x: 160, y: 160 }), null);
+
+    rect.cache({ hitCanvasPixelRatio: 2 });
+    rect.drawHitFromCache();
+    layer.draw();
+    assert.equal(layer.getIntersection({ x: 140, y: 140 }), rect);
+    assert.equal(layer.getIntersection({ x: 160, y: 160 }), null);
+  });
 });
