@@ -5,6 +5,7 @@ import {
   cloneAndCompareLayer,
   loadImage,
   compareLayers,
+  assertAlmostDeepEqual,
 } from '../unit/test-utils';
 
 describe('Filter', function () {
@@ -385,5 +386,50 @@ describe('Filter', function () {
 
     const trace = rect._getCanvasCache().filter.getContext().getTrace(true);
     assert.equal(trace.split('putImageData()').length - 1, 1);
+  });
+
+  function uniformImageData(rgba: number[]) {
+    const context = Konva.Util.createCanvasElement().getContext('2d')!;
+    const imageData = context.createImageData(20, 20);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      imageData.data.set(rgba, i);
+    }
+    return imageData;
+  }
+  function centerPixel(imageData) {
+    const i = (10 * imageData.width + 10) * 4;
+    return Array.from(imageData.data.slice(i, i + 4));
+  }
+
+  it('Blur keeps the colour of semi-transparent pixels', function () {
+    const imageData = uniformImageData([200, 100, 50, 128]);
+
+    Konva.Filters.Blur.call({ blurRadius: () => 5 }, imageData);
+
+    assertAlmostDeepEqual(centerPixel(imageData), [200, 100, 50, 128], 3);
+  });
+
+  it('Blur keeps a 1 pixel tall image', function () {
+    const context = Konva.Util.createCanvasElement().getContext('2d')!;
+    const imageData = context.createImageData(5, 1);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      imageData.data.set([200, 100, 50, 255], i);
+    }
+
+    Konva.Filters.Blur.call({ blurRadius: () => 2 }, imageData);
+
+    assertAlmostDeepEqual(
+      Array.from(imageData.data.slice(8, 12)),
+      [200, 100, 50, 255],
+      3
+    );
+  });
+
+  it('Blur with a huge radius does not blank the image', function () {
+    const imageData = uniformImageData([255, 0, 0, 255]);
+
+    Konva.Filters.Blur.call({ blurRadius: () => 200 }, imageData);
+
+    assertAlmostDeepEqual(centerPixel(imageData), [255, 0, 0, 255], 3);
   });
 });

@@ -93,6 +93,16 @@ const shg_table = [
   24, 24, 24, 24, 24, 24, 24,
 ];
 
+// the horizontal pass blurs premultiplied colour, otherwise transparent
+// pixels bleed their colour into their neighbours; the vertical pass
+// unpremultiplies again
+function premultiply(channel: number, alpha: number) {
+  return alpha === 255 ? channel : (channel * alpha) / 255;
+}
+
+// the stack sums overflow 32-bit integers above this radius
+const MAX_RADIUS = 180;
+
 function filterGaussBlurRGBA(imageData, radius) {
   const pixels = imageData.data,
     width = imageData.width,
@@ -155,10 +165,14 @@ function filterGaussBlurRGBA(imageData, radius) {
       a_sum =
         0;
 
-    r_out_sum = radiusPlus1 * (pr = pixels[yi]);
-    g_out_sum = radiusPlus1 * (pg = pixels[yi + 1]);
-    b_out_sum = radiusPlus1 * (pb = pixels[yi + 2]);
-    a_out_sum = radiusPlus1 * (pa = pixels[yi + 3]);
+    pa = pixels[yi + 3];
+    pr = premultiply(pixels[yi], pa);
+    pg = premultiply(pixels[yi + 1], pa);
+    pb = premultiply(pixels[yi + 2], pa);
+    r_out_sum = radiusPlus1 * pr;
+    g_out_sum = radiusPlus1 * pg;
+    b_out_sum = radiusPlus1 * pb;
+    a_out_sum = radiusPlus1 * pa;
 
     r_sum += sumFactor * pr;
     g_sum += sumFactor * pg;
@@ -177,10 +191,12 @@ function filterGaussBlurRGBA(imageData, radius) {
 
     for (let i = 1; i < radiusPlus1; i++) {
       p = yi + ((widthMinus1 < i ? widthMinus1 : i) << 2);
-      r_sum += (stack.r = pr = pixels[p]) * (rbs = radiusPlus1 - i);
-      g_sum += (stack.g = pg = pixels[p + 1]) * rbs;
-      b_sum += (stack.b = pb = pixels[p + 2]) * rbs;
-      a_sum += (stack.a = pa = pixels[p + 3]) * rbs;
+      pa = pixels[p + 3];
+      r_sum +=
+        (stack.r = pr = premultiply(pixels[p], pa)) * (rbs = radiusPlus1 - i);
+      g_sum += (stack.g = pg = premultiply(pixels[p + 1], pa)) * rbs;
+      b_sum += (stack.b = pb = premultiply(pixels[p + 2], pa)) * rbs;
+      a_sum += (stack.a = pa) * rbs;
 
       r_in_sum += pr;
       g_in_sum += pg;
@@ -193,15 +209,10 @@ function filterGaussBlurRGBA(imageData, radius) {
     stackIn = stackStart;
     stackOut = stackEnd;
     for (let x = 0; x < width; x++) {
-      pixels[yi + 3] = pa = (a_sum * mul_sum) >> shg_sum;
-      if (pa !== 0) {
-        pa = 255 / pa;
-        pixels[yi] = ((r_sum * mul_sum) >> shg_sum) * pa;
-        pixels[yi + 1] = ((g_sum * mul_sum) >> shg_sum) * pa;
-        pixels[yi + 2] = ((b_sum * mul_sum) >> shg_sum) * pa;
-      } else {
-        pixels[yi] = pixels[yi + 1] = pixels[yi + 2] = 0;
-      }
+      pixels[yi] = (r_sum * mul_sum) >> shg_sum;
+      pixels[yi + 1] = (g_sum * mul_sum) >> shg_sum;
+      pixels[yi + 2] = (b_sum * mul_sum) >> shg_sum;
+      pixels[yi + 3] = (a_sum * mul_sum) >> shg_sum;
 
       r_sum -= r_out_sum;
       g_sum -= g_out_sum;
@@ -215,10 +226,11 @@ function filterGaussBlurRGBA(imageData, radius) {
 
       p = (yw + ((p = x + radius + 1) < widthMinus1 ? p : widthMinus1)) << 2;
 
-      r_in_sum += stackIn.r = pixels[p];
-      g_in_sum += stackIn.g = pixels[p + 1];
-      b_in_sum += stackIn.b = pixels[p + 2];
-      a_in_sum += stackIn.a = pixels[p + 3];
+      pa = pixels[p + 3];
+      r_in_sum += stackIn.r = premultiply(pixels[p], pa);
+      g_in_sum += stackIn.g = premultiply(pixels[p + 1], pa);
+      b_in_sum += stackIn.b = premultiply(pixels[p + 2], pa);
+      a_in_sum += stackIn.a = pa;
 
       r_sum += r_in_sum;
       g_sum += g_in_sum;
@@ -276,7 +288,8 @@ function filterGaussBlurRGBA(imageData, radius) {
       stack = stack.next;
     }
 
-    let yp = width;
+    // the pass primes from the second row, which a 1-pixel-tall image lacks
+    let yp = Math.min(1, heightMinus1) * width;
 
     for (let i = 1; i <= radius; i++) {
       yi = (yp + x) << 2;
@@ -364,7 +377,7 @@ function filterGaussBlurRGBA(imageData, radius) {
  * node.blurRadius(10);
  */
 export const Blur: Filter = function Blur(imageData) {
-  const radius = Math.round(this.blurRadius());
+  const radius = Math.min(Math.round(this.blurRadius()), MAX_RADIUS);
 
   if (radius > 0) {
     filterGaussBlurRGBA(imageData, radius);
