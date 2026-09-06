@@ -2157,4 +2157,41 @@ describe('Text', function () {
     assert.equal(text.getTextWidth(), text.measureSize('🇺🇸🇺🇸').width + 2 * 10);
   });
 
+  it('wrapping measures a bounded amount of text per line', function () {
+    var text = new Konva.Text({
+      text: 'lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(
+        200
+      ),
+      width: 300,
+      fontSize: 16,
+    });
+    const total = text.text().length;
+    let measured = 0;
+    const original = text._getTextWidth;
+    text._getTextWidth = function (str) {
+      measured += str.length;
+      return original.call(this, str);
+    };
+    text._setTextData();
+    assert.isAbove(text.textArr.length, 100, 'text wraps to many lines');
+    // every wrapped line should cost a few measurements of about its own
+    // length, not of the whole remaining text
+    assert.isBelow(measured, total * 60);
+  });
+
+  it('per-character rendering does not rebuild text metrics for every glyph', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var text = new Konva.Text({
+      text: 'Hello world, hello Konva',
+      fontSize: 30,
+      letterSpacing: 2,
+    });
+    layer.add(text);
+    stage.add(layer);
+
+    const calls = countCalls(text, 'measureSize', () => layer.draw());
+    // at most one call per pass (scene and hit) for the font ascent
+    assert.isAtMost(calls, 2);
+  });
 });

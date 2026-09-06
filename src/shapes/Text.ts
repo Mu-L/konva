@@ -389,7 +389,8 @@ export class Text extends Shape<TextConfig> {
           this._partialTextX = lineTranslateX;
           this._partialTextY = translateY + lineTranslateY;
           this._partialText = letter;
-          const letterWidth = this.measureSize(letter).width;
+          // the font of the shape is already set on the context
+          const letterWidth = context.measureText(letter).width;
 
           if (charRenderFunc) {
             context.save();
@@ -619,107 +620,94 @@ export class Text extends Shape<TextConfig> {
          * if width is fixed and line does not fit entirely
          * break the line into multiple fitting lines
          */
-        while (line.length > 0) {
-          // Compute the grapheme array once per iteration. `line` is constant
-          // within this block (only reassigned at the bottom), so calling
-          // `stringToArray(line)` inside the binary search and again afterwards
-          // is redundant and makes resize O(N·logN) on long text.
-          const lineArray = stringToArray(line);
+        const graphemes = stringToArray(line);
+        const length = graphemes.length;
+        let start = 0;
+        const text = (end: number) => graphemes.slice(start, end).join('');
+        const isBreak = (char: string) => char === SPACE || char === DASH;
+        // graphemes per line, estimated from the average grapheme width
+        const perLine = Math.max(1, Math.ceil((length * maxWidth) / lineWidth));
+        while (start < length) {
+          // only reserve the ellipsis width on a line that may be the last
+          // visible one
+          const extraWidth =
+            shouldAddEllipsis &&
+            fixedHeight &&
+            currentHeightPx + lineHeightPx > maxHeightPx
+              ? additionalWidth
+              : 0;
+          // width of the longest fitting prefix found so far
+          let matchWidth = 0;
+          const fits = (end: number) => {
+            const width = this._getTextWidth(text(end), end - start);
+            if (width + extraWidth > maxWidth) {
+              return false;
+            }
+            matchWidth = width;
+            return true;
+          };
           /*
-           * use binary search to find the longest substring that
-           * that would fit in the specified width
+           * find the longest prefix that fits in the specified width:
+           * grow a window from the estimate until it stops fitting, then
+           * binary search inside it. Every probe measures about one line,
+           * not the whole remaining text, so wrapping stays linear
            */
-          let low = 0,
-            high = lineArray.length, // Convert to array for proper emoji handling
-            match = '',
-            matchWidth = 0;
-          while (low < high) {
-            const mid = (low + high) >>> 1,
-              // Convert array indices to string
-              substr = lineArray.slice(0, mid + 1).join(''),
-              substrWidth = this._getTextWidth(substr);
-
-            // Only add ellipsis width when we need to consider truncation
-            // for the current line (when it might be the last visible line)
-            const shouldConsiderEllipsis =
-              shouldAddEllipsis &&
-              fixedHeight &&
-              currentHeightPx + lineHeightPx > maxHeightPx;
-
-            const effectiveWidth = shouldConsiderEllipsis
-              ? substrWidth + additionalWidth
-              : substrWidth;
-
-            if (effectiveWidth <= maxWidth) {
-              low = mid + 1;
-              match = substr;
-              matchWidth = substrWidth; // Store actual text width without ellipsis
+          let low = start,
+            high = Math.min(length, start + perLine);
+          while (fits(high)) {
+            low = high;
+            if (high === length) {
+              break;
+            }
+            high = Math.min(length, high + (high - start));
+          }
+          while (high - low > 1) {
+            const mid = (low + high) >>> 1;
+            if (fits(mid)) {
+              low = mid;
             } else {
               high = mid;
             }
           }
-          /*
-           * 'low' is now the index of the substring end
-           * 'match' is the substring
-           * 'matchWidth' is the substring width in px
-           */
-          if (match) {
-            // a fitting substring was found
-            if (wrapAtWord) {
-              // try to find a space or dash where wrapping could be done
-              const matchArray = stringToArray(match);
-              const nextChar = lineArray[matchArray.length];
-              const nextIsSpaceOrDash = nextChar === SPACE || nextChar === DASH;
-
-              let wrapIndex;
-              if (nextIsSpaceOrDash && matchWidth <= maxWidth) {
-                wrapIndex = matchArray.length;
-              } else {
-                // Find last space or dash in the array
-                const lastSpaceIndex = matchArray.lastIndexOf(SPACE);
-                const lastDashIndex = matchArray.lastIndexOf(DASH);
-                wrapIndex = Math.max(lastSpaceIndex, lastDashIndex) + 1;
-              }
-
-              if (wrapIndex > 0) {
-                low = wrapIndex;
-                match = lineArray.slice(0, low).join('');
-                matchWidth = this._getTextWidth(match);
-              }
-            }
-            // if (align === 'right') {
-            match = match.trimRight();
-            // }
-            this._addTextLine(match);
-            textWidth = Math.max(textWidth, matchWidth);
-            currentHeightPx += lineHeightPx;
-
-            const shouldHandleEllipsis =
-              this._shouldHandleEllipsis(currentHeightPx);
-            if (shouldHandleEllipsis) {
-              this._tryToAddEllipsisToLastLine();
-              /*
-               * stop wrapping if wrapping is disabled or if adding
-               * one more line would overflow the fixed height
-               */
-              break;
-            }
-
-            // Reuse the cached `lineArray` to compute the remaining text.
-            line = lineArray.slice(low).join('').trimLeft();
-
-            if (line.length > 0) {
-              lineWidth = this._getTextWidth(line);
-              if (lineWidth <= maxWidth) {
-                this._addTextLine(line);
-                currentHeightPx += lineHeightPx;
-                textWidth = Math.max(textWidth, lineWidth);
-                break;
-              }
-            }
-          } else {
+          if (low === start) {
             // not even one character could fit in the element, abort
             break;
+          }
+          if (low === length) {
+            // the rest of the paragraph fits on one line: kept untrimmed and
+            // without the ellipsis check, like a paragraph that never wrapped
+            this._addTextLine(text(length));
+            currentHeightPx += lineHeightPx;
+            textWidth = Math.max(textWidth, matchWidth);
+            break;
+          }
+          if (wrapAtWord && !isBreak(graphemes[low])) {
+            // wrap at the last space or dash of the line instead
+            let wrapIndex = low - 1;
+            while (wrapIndex >= start && !isBreak(graphemes[wrapIndex])) {
+              wrapIndex--;
+            }
+            if (wrapIndex >= start) {
+              low = wrapIndex + 1;
+              matchWidth = this._getTextWidth(text(low), low - start);
+            }
+          }
+          this._addTextLine(text(low).trimRight());
+          textWidth = Math.max(textWidth, matchWidth);
+          currentHeightPx += lineHeightPx;
+
+          if (this._shouldHandleEllipsis(currentHeightPx)) {
+            this._tryToAddEllipsisToLastLine();
+            /*
+             * stop wrapping if wrapping is disabled or if adding
+             * one more line would overflow the fixed height
+             */
+            break;
+          }
+          // the next line starts after the whitespace of the break
+          start = low;
+          while (start < length && !graphemes[start].trim()) {
+            start++;
           }
         }
       } else {
