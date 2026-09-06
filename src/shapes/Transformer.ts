@@ -70,6 +70,7 @@ const ATTR_CHANGE_LIST = [
   'anchorCornerRadiusChange',
   'ignoreStrokeChange',
   'anchorStyleFuncChange',
+  'paddingChange',
 ]
   .map((e) => e + `.${EVENTS_NAME}`)
   .join(' ');
@@ -251,6 +252,10 @@ let activeTransformersCount = 0;
 export class Transformer extends Group {
   _nodes: Array<Node>;
   _movingAnchorName: string | null = null;
+  // the pointer that grabbed the anchor, other pointers are ignored
+  _pointerId?: number;
+  _anchors: Record<string, Rect> = {};
+  _back: Shape;
   _transforming = false;
   // the window the transform events are listened to. The stage may be
   // rendered in another window than the one Konva was imported into
@@ -382,7 +387,7 @@ export class Transformer extends Group {
       lastPos = node.getAbsolutePosition();
       // actual dragging of Transformer doesn't make sense
       // but we need to make sure it also has all drag events
-      if (!this.isDragging() && node !== this.findOne('.back')) {
+      if (!this.isDragging() && node !== this._back) {
         this.startDrag(e, false);
       }
     });
@@ -465,37 +470,6 @@ export class Transformer extends Group {
     return this._getCache(NODES_RECT, this.__getNodeRect);
   }
 
-  // return absolute rotated bounding rectangle
-  __getNodeShape(node: Node, rot = this.rotation(), relative?: Node) {
-    const rect = node.getClientRect({
-      skipTransform: true,
-      skipShadow: true,
-      skipStroke: this.ignoreStroke(),
-    });
-
-    const absScale = node.getAbsoluteScale(relative);
-    const absPos = node.getAbsolutePosition(relative);
-
-    const dx = rect.x * absScale.x - node.offsetX() * absScale.x;
-    const dy = rect.y * absScale.y - node.offsetY() * absScale.y;
-
-    const rotation =
-      (Konva.getAngle(node.getAbsoluteRotation()) + Math.PI * 2) %
-      (Math.PI * 2);
-
-    const box = {
-      x: absPos.x + dx * Math.cos(rotation) + dy * Math.sin(-rotation),
-      y: absPos.y + dy * Math.cos(rotation) + dx * Math.sin(rotation),
-      width: rect.width * absScale.x,
-      height: rect.height * absScale.y,
-      rotation: rotation,
-    };
-    return rotateAroundPoint(box, -Konva.getAngle(rot), {
-      x: 0,
-      y: 0,
-    });
-  }
-  // returns box + rotation of all shapes
   __getNodeRect() {
     const node = this.getNode();
     if (!node) {
@@ -556,15 +530,6 @@ export class Transformer extends Group {
       height: maxY - minY,
       rotation: Konva.getAngle(this.rotation()),
     };
-    // const shapes = this.nodes().map(node => {
-    //   return this.__getNodeShape(node);
-    // });
-
-    // const box = getShapesRect(shapes);
-    // return rotateAroundPoint(box, Konva.getAngle(this.rotation()), {
-    //   x: 0,
-    //   y: 0
-    // });
   }
   getX() {
     return this._getNodeRect().x;
@@ -600,6 +565,7 @@ export class Transformer extends Group {
       draggable: true,
       hitStrokeWidth: TOUCH_DEVICE ? 10 : 'auto',
     });
+    this._anchors[name] = anchor;
     const self = this;
     anchor.on('mousedown touchstart', function (e) {
       self._handleMouseDown(e);
@@ -698,6 +664,7 @@ export class Transformer extends Group {
         ctx.fillStrokeShape(shape);
       },
     });
+    this._back = back;
     this.add(back);
     this._proxyDrag(back);
     // do not bubble drag from the back shape
@@ -744,8 +711,10 @@ export class Transformer extends Group {
     }
 
     this._transforming = true;
+    // the pointer that hit the anchor (a touchstart can land several fingers)
+    this._pointerId = e.pointerId ?? Util._getFirstPointerId(e.evt);
     const ap = e.target.getAbsolutePosition();
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = e.target.getStage()._getPointerById(this._pointerId)!;
     this._anchorDragOffset = {
       x: pos.x - ap.x,
       y: pos.y - ap.y,
@@ -758,12 +727,15 @@ export class Transformer extends Group {
   }
   _handleMouseMove(e) {
     let x, y, newHypotenuse;
-    const anchorNode = this.findOne('.' + this._movingAnchorName)!;
+    const anchorNode = this._anchors[this._movingAnchorName!];
     const stage = anchorNode.getStage()!;
 
     stage.setPointersPositions(e);
 
-    const pp = stage.getPointerPosition()!;
+    const pp = stage._getPointerById(this._pointerId);
+    if (!pp) {
+      return;
+    }
     let newNodePos = {
       x: pp.x - this._anchorDragOffset.x,
       y: pp.y - this._anchorDragOffset.y,
@@ -837,8 +809,8 @@ export class Transformer extends Group {
               y: this.height() / 2,
             }
           : {
-              x: this.findOne('.bottom-right')!.x(),
-              y: this.findOne('.bottom-right')!.y(),
+              x: this._anchors['bottom-right'].x(),
+              y: this._anchors['bottom-right'].y(),
             };
         newHypotenuse = Math.sqrt(
           Math.pow(comparePoint.x - anchorNode.x(), 2) +
@@ -846,19 +818,19 @@ export class Transformer extends Group {
         );
 
         const reverseX =
-          this.findOne('.top-left')!.x() > comparePoint.x ? -1 : 1;
+          this._anchors['top-left'].x() > comparePoint.x ? -1 : 1;
 
         const reverseY =
-          this.findOne('.top-left')!.y() > comparePoint.y ? -1 : 1;
+          this._anchors['top-left'].y() > comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.top-left')!.x(comparePoint.x - x);
-        this.findOne('.top-left')!.y(comparePoint.y - y);
+        this._anchors['top-left'].x(comparePoint.x - x);
+        this._anchors['top-left'].y(comparePoint.y - y);
       }
     } else if (this._movingAnchorName === 'top-center') {
-      this.findOne('.top-left')!.y(anchorNode.y());
+      this._anchors['top-left'].y(anchorNode.y());
     } else if (this._movingAnchorName === 'top-right') {
       if (keepProportion) {
         anchorProjected = true;
@@ -868,8 +840,8 @@ export class Transformer extends Group {
               y: this.height() / 2,
             }
           : {
-              x: this.findOne('.bottom-left')!.x(),
-              y: this.findOne('.bottom-left')!.y(),
+              x: this._anchors['bottom-left'].x(),
+              y: this._anchors['bottom-left'].y(),
             };
 
         newHypotenuse = Math.sqrt(
@@ -878,24 +850,24 @@ export class Transformer extends Group {
         );
 
         const reverseX =
-          this.findOne('.top-right')!.x() < comparePoint.x ? -1 : 1;
+          this._anchors['top-right'].x() < comparePoint.x ? -1 : 1;
 
         const reverseY =
-          this.findOne('.top-right')!.y() > comparePoint.y ? -1 : 1;
+          this._anchors['top-right'].y() > comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.top-right')!.x(comparePoint.x + x);
-        this.findOne('.top-right')!.y(comparePoint.y - y);
+        this._anchors['top-right'].x(comparePoint.x + x);
+        this._anchors['top-right'].y(comparePoint.y - y);
       }
       var pos = anchorNode.position();
-      this.findOne('.top-left')!.y(pos.y);
-      this.findOne('.bottom-right')!.x(pos.x);
+      this._anchors['top-left'].y(pos.y);
+      this._anchors['bottom-right'].x(pos.x);
     } else if (this._movingAnchorName === 'middle-left') {
-      this.findOne('.top-left')!.x(anchorNode.x());
+      this._anchors['top-left'].x(anchorNode.x());
     } else if (this._movingAnchorName === 'middle-right') {
-      this.findOne('.bottom-right')!.x(anchorNode.x());
+      this._anchors['bottom-right'].x(anchorNode.x());
     } else if (this._movingAnchorName === 'bottom-left') {
       if (keepProportion) {
         anchorProjected = true;
@@ -905,8 +877,8 @@ export class Transformer extends Group {
               y: this.height() / 2,
             }
           : {
-              x: this.findOne('.top-right')!.x(),
-              y: this.findOne('.top-right')!.y(),
+              x: this._anchors['top-right'].x(),
+              y: this._anchors['top-right'].y(),
             };
 
         newHypotenuse = Math.sqrt(
@@ -927,10 +899,10 @@ export class Transformer extends Group {
 
       pos = anchorNode.position();
 
-      this.findOne('.top-left')!.x(pos.x);
-      this.findOne('.bottom-right')!.y(pos.y);
+      this._anchors['top-left'].x(pos.x);
+      this._anchors['bottom-right'].y(pos.y);
     } else if (this._movingAnchorName === 'bottom-center') {
-      this.findOne('.bottom-right')!.y(anchorNode.y());
+      this._anchors['bottom-right'].y(anchorNode.y());
     } else if (this._movingAnchorName === 'bottom-right') {
       if (keepProportion) {
         anchorProjected = true;
@@ -940,8 +912,8 @@ export class Transformer extends Group {
               y: this.height() / 2,
             }
           : {
-              x: this.findOne('.top-left')!.x(),
-              y: this.findOne('.top-left')!.y(),
+              x: this._anchors['top-left'].x(),
+              y: this._anchors['top-left'].y(),
             };
 
         newHypotenuse = Math.sqrt(
@@ -950,16 +922,16 @@ export class Transformer extends Group {
         );
 
         const reverseX =
-          this.findOne('.bottom-right')!.x() < comparePoint.x ? -1 : 1;
+          this._anchors['bottom-right'].x() < comparePoint.x ? -1 : 1;
 
         const reverseY =
-          this.findOne('.bottom-right')!.y() < comparePoint.y ? -1 : 1;
+          this._anchors['bottom-right'].y() < comparePoint.y ? -1 : 1;
 
         x = newHypotenuse * this.cos * reverseX;
         y = newHypotenuse * this.sin * reverseY;
 
-        this.findOne('.bottom-right')!.x(comparePoint.x + x);
-        this.findOne('.bottom-right')!.y(comparePoint.y + y);
+        this._anchors['bottom-right'].x(comparePoint.x + x);
+        this._anchors['bottom-right'].y(comparePoint.y + y);
       }
     } else {
       console.error(
@@ -972,8 +944,8 @@ export class Transformer extends Group {
 
     centeredScaling = this.centeredScaling() || e.altKey;
     if (centeredScaling) {
-      const topLeft = this.findOne('.top-left')!;
-      const bottomRight = this.findOne('.bottom-right')!;
+      const topLeft = this._anchors['top-left'];
+      const bottomRight = this._anchors['bottom-right'];
       const topOffsetX = topLeft.x();
       const topOffsetY = topLeft.y();
 
@@ -991,16 +963,16 @@ export class Transformer extends Group {
       });
     }
 
-    const absPos = this.findOne('.top-left')!.getAbsolutePosition();
+    const absPos = this._anchors['top-left'].getAbsolutePosition();
 
     x = absPos.x;
     y = absPos.y;
 
     const width =
-      this.findOne('.bottom-right')!.x() - this.findOne('.top-left')!.x();
+      this._anchors['bottom-right'].x() - this._anchors['top-left'].x();
 
     const height =
-      this.findOne('.bottom-right')!.y() - this.findOne('.top-left')!.y();
+      this._anchors['bottom-right'].y() - this._anchors['top-left'].y();
 
     this._fitNodesInto(
       {
@@ -1015,6 +987,16 @@ export class Transformer extends Group {
     );
   }
   _handleMouseUp(e) {
+    // only the pointer that grabbed the anchor ends the transform
+    const stage = this.getStage();
+    if (stage) {
+      stage.setPointersPositions(e);
+      if (
+        !stage._changedPointerPositions.some((p) => p.id === this._pointerId)
+      ) {
+        return;
+      }
+    }
     this._removeEvents(e);
   }
   getAbsoluteTransform() {
@@ -1065,11 +1047,11 @@ export class Transformer extends Group {
 
     const minSize = 1;
 
-    if (Util._inRange(newAttrs.width, -this.padding() * 2 - minSize, minSize)) {
-      this.update();
-      return;
-    }
+    // a zero-size box has a singular transform, there is nothing to scale from
     if (
+      !oldAttrs.width ||
+      !oldAttrs.height ||
+      Util._inRange(newAttrs.width, -this.padding() * 2 - minSize, minSize) ||
       Util._inRange(newAttrs.height, -this.padding() * 2 - minSize, minSize)
     ) {
       this.update();
@@ -1284,11 +1266,6 @@ export class Transformer extends Group {
     this.update();
   }
 
-  _batchChangeChild(selector: string, attrs: any) {
-    const anchor = this.findOne(selector)!;
-    anchor.setAttrs(attrs);
-  }
-
   update() {
     const attrs = this._getNodeRect();
     this.rotation(Util._getRotation(attrs.rotation));
@@ -1300,7 +1277,7 @@ export class Transformer extends Group {
     const padding = this.padding();
 
     const anchorSize = this.anchorSize();
-    const anchors = this.find<Rect>('._anchor');
+    const anchors = Object.values(this._anchors);
     anchors.forEach((node) => {
       node.setAttrs({
         width: anchorSize,
@@ -1314,52 +1291,52 @@ export class Transformer extends Group {
       });
     });
 
-    this._batchChangeChild('.top-left', {
+    this._anchors['top-left'].setAttrs({
       x: 0,
       y: 0,
       offsetX: anchorSize / 2 + padding,
       offsetY: anchorSize / 2 + padding,
       visible: resizeEnabled && enabledAnchors.indexOf('top-left') >= 0,
     });
-    this._batchChangeChild('.top-center', {
+    this._anchors['top-center'].setAttrs({
       x: width / 2,
       y: 0,
       offsetY: anchorSize / 2 + padding,
       visible: resizeEnabled && enabledAnchors.indexOf('top-center') >= 0,
     });
-    this._batchChangeChild('.top-right', {
+    this._anchors['top-right'].setAttrs({
       x: width,
       y: 0,
       offsetX: anchorSize / 2 - padding,
       offsetY: anchorSize / 2 + padding,
       visible: resizeEnabled && enabledAnchors.indexOf('top-right') >= 0,
     });
-    this._batchChangeChild('.middle-left', {
+    this._anchors['middle-left'].setAttrs({
       x: 0,
       y: height / 2,
       offsetX: anchorSize / 2 + padding,
       visible: resizeEnabled && enabledAnchors.indexOf('middle-left') >= 0,
     });
-    this._batchChangeChild('.middle-right', {
+    this._anchors['middle-right'].setAttrs({
       x: width,
       y: height / 2,
       offsetX: anchorSize / 2 - padding,
       visible: resizeEnabled && enabledAnchors.indexOf('middle-right') >= 0,
     });
-    this._batchChangeChild('.bottom-left', {
+    this._anchors['bottom-left'].setAttrs({
       x: 0,
       y: height,
       offsetX: anchorSize / 2 + padding,
       offsetY: anchorSize / 2 - padding,
       visible: resizeEnabled && enabledAnchors.indexOf('bottom-left') >= 0,
     });
-    this._batchChangeChild('.bottom-center', {
+    this._anchors['bottom-center'].setAttrs({
       x: width / 2,
       y: height,
       offsetY: anchorSize / 2 - padding,
       visible: resizeEnabled && enabledAnchors.indexOf('bottom-center') >= 0,
     });
-    this._batchChangeChild('.bottom-right', {
+    this._anchors['bottom-right'].setAttrs({
       x: width,
       y: height,
       offsetX: anchorSize / 2 - padding,
@@ -1405,13 +1382,13 @@ export class Transformer extends Group {
 
     // Final position with offset (accounting for height sign and padding)
     const sign = Util._sign(height);
-    this._batchChangeChild('.rotater', {
+    this._anchors['rotater'].setAttrs({
       x: edgeX + dirX * rotateAnchorOffset * sign,
       y: edgeY + dirY * rotateAnchorOffset * sign - padding * dirY,
       visible: this.rotateEnabled(),
     });
 
-    this._batchChangeChild('.back', {
+    this._back.setAttrs({
       width: width,
       height: height,
       visible: this.borderEnabled(),
@@ -1449,10 +1426,6 @@ export class Transformer extends Group {
   stopTransform() {
     if (this._transforming) {
       this._removeEvents();
-      const anchorNode = this.findOne('.' + this._movingAnchorName);
-      if (anchorNode) {
-        anchorNode.stopDrag();
-      }
     }
   }
   destroy() {

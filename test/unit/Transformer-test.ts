@@ -2,6 +2,7 @@ import { assert } from 'chai';
 import type { Transformer } from '../../src/shapes/Transformer.ts';
 import type { Rect } from '../../src/shapes/Rect.ts';
 import type { Shape } from '../../src/Shape.ts';
+import type { Stage } from '../../src/Stage.ts';
 
 import {
   addStage,
@@ -11,6 +12,9 @@ import {
   simulateMouseMove as sm,
   simulateMouseUp as su,
   assertAlmostEqual,
+  countCalls,
+  simulateTouchStart,
+  simulateTouchEnd,
 } from './test-utils.ts';
 
 function simulateMouseDown(
@@ -48,6 +52,19 @@ function simulateMouseUp(tr: Transformer, pos = { x: 0, y: 0 }) {
     clientY: pos.y + top,
   });
   su(stage, pos || { x: 1, y: 1 });
+}
+
+// a native-like touch event for the window listeners of a transformer
+function touchEvent(
+  stage: Stage,
+  type: string,
+  touches: { id: number; x: number; y: number }[],
+  changed = touches
+) {
+  const top = isNode ? 0 : stage.content.getBoundingClientRect().top;
+  const list = (arr) =>
+    arr.map((t) => ({ identifier: t.id, clientX: t.x, clientY: t.y + top }));
+  return { type, touches: list(touches), changedTouches: list(changed) };
 }
 
 // prevents flipping: rejects any box that crossed zero size
@@ -5843,4 +5860,131 @@ describe('Transformer', function () {
     // rect2 should NOT become a child of the transformer
     assert.notEqual(rect2.getParent(), tr);
   });
+
+  it('update() does not look the anchors up by selector', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ x: 50, y: 50, width: 100, height: 100 });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+
+    var finds = countCalls(tr, 'find', () => {
+      var findOnes = countCalls(tr, 'findOne', () => tr.update());
+      assert.equal(findOnes, 0);
+    });
+    assert.equal(finds, 0);
+    assert.deepEqual(tr.position(), { x: 50, y: 50 });
+  });
+
+  it('padding change refreshes the transformer', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ x: 50, y: 50, width: 100, height: 100 });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect], anchorSize: 10 });
+    layer.add(tr);
+
+    var anchor = tr.findOne<Rect>('.top-left')!;
+    assert.equal(anchor.offsetX(), 5);
+    tr.padding(10);
+    assert.equal(anchor.offsetX(), 15);
+  });
+
+  it('resizing a node with a zero-size box does not write NaN into it', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 0,
+      height: 100,
+      fill: 'red',
+    });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+    layer.draw();
+
+    simulateMouseDown(tr, { x: 50, y: 100 });
+    simulateMouseMove(tr, { x: 80, y: 100 });
+    simulateMouseUp(tr, { x: 80, y: 100 });
+
+    ['x', 'y', 'scaleX', 'scaleY', 'rotation'].forEach((attr) => {
+      assert.isTrue(isFinite(rect[attr]()), attr + ' is finite');
+    });
+    assert.isTrue(isFinite(tr.getClientRect().width));
+  });
+
+  it('transform follows the finger that grabbed the anchor', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'red',
+    });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+    layer.draw();
+
+    var transformend = 0;
+    rect.on('transformend', () => transformend++);
+    var resting = { x: 10, y: 10, id: 0 };
+    var grabbing = { x: 150, y: 150, id: 1 };
+
+    // first finger rests on the stage, second grabs the bottom-right anchor
+    simulateTouchStart(stage, [resting]);
+    simulateTouchStart(stage, [resting, grabbing], [grabbing]);
+    assert.equal(tr.isTransforming(), true);
+
+    // the resting finger moves: the shape must not change
+    resting = { x: 30, y: 30, id: 0 };
+    tr._handleMouseMove(
+      touchEvent(stage, 'touchmove', [resting, grabbing], [resting])
+    );
+    assert.equal(rect.width() * rect.scaleX(), 100);
+    assert.equal(rect.height() * rect.scaleY(), 100);
+
+    // the grabbing finger moves: the shape resizes
+    grabbing = { x: 170, y: 170, id: 1 };
+    tr._handleMouseMove(
+      touchEvent(stage, 'touchmove', [resting, grabbing], [grabbing])
+    );
+    assert.closeTo(rect.width() * rect.scaleX(), 120, 0.001);
+    assert.closeTo(rect.height() * rect.scaleY(), 120, 0.001);
+
+    // lifting the resting finger does not end the transform
+    tr._handleMouseUp(touchEvent(stage, 'touchend', [grabbing], [resting]));
+    assert.equal(tr.isTransforming(), true);
+    assert.equal(transformend, 0);
+
+    tr._handleMouseUp(touchEvent(stage, 'touchend', [], [grabbing]));
+    assert.equal(tr.isTransforming(), false);
+    assert.equal(transformend, 1);
+    simulateTouchEnd(stage, [], [grabbing]);
+    simulateTouchEnd(stage, [], [resting]);
+
+    // both fingers land in one touchstart: the one on the anchor grabs it
+    layer.draw();
+    simulateTouchStart(stage, [resting, grabbing]);
+    assert.equal(tr.isTransforming(), true);
+    grabbing = { x: 190, y: 190, id: 1 };
+    tr._handleMouseMove(
+      touchEvent(stage, 'touchmove', [resting, grabbing], [grabbing])
+    );
+    assert.closeTo(rect.width() * rect.scaleX(), 140, 0.001);
+    tr._handleMouseUp(touchEvent(stage, 'touchend', [resting], [grabbing]));
+    assert.equal(tr.isTransforming(), false);
+    simulateTouchEnd(stage, [], [grabbing]);
+    simulateTouchEnd(stage, [], [resting]);
+  });
+
 });
