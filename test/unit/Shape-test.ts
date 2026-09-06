@@ -2530,4 +2530,17 @@ describe('Shape', function () {
 
     compareLayerAndCanvas(layer, finalCanvas, 200);
   });
+
+  it('hasShadow() follows shadowOffsetX and shadowOffsetY changes', function () {
+    var rect = new Konva.Rect({ width: 10, height: 10, fill: 'red' });
+    assert.equal(rect.hasShadow(), false);
+    rect.shadowOffsetX(5);
+    assert.equal(rect.hasShadow(), true);
+    rect.shadowOffsetX(0);
+    assert.equal(rect.hasShadow(), false);
+    rect.shadowOffsetY(5);
+    assert.equal(rect.hasShadow(), true);
+    rect.shadowOffset({ x: 0, y: 0 });
+    assert.equal(rect.hasShadow(), false);
+  });
 });

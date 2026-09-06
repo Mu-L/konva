@@ -915,7 +915,7 @@ _registerNode(Shape);
 
 Shape.prototype.eventListeners = {};
 Shape.prototype.on(
-  'shadowColorChange.konva shadowBlurChange.konva shadowOffsetChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
+  'shadowColorChange.konva shadowBlurChange.konva shadowOffsetXChange.konva shadowOffsetYChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
   _clearHasShadowCache
 );
 
