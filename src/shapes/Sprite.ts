@@ -192,6 +192,10 @@ export class Sprite extends Shape<SpriteConfig> {
     this.anim.stop();
     clearInterval(this.interval);
   }
+  destroy() {
+    this.stop();
+    return super.destroy();
+  }
   /**
    * determine if animation of sprite is running or not.  returns true or false
    * @method

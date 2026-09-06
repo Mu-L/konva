@@ -285,4 +285,34 @@ describe('Sprite', function () {
       }, 68);
     });
   });
+
+  it('destroy stops the frame interval', function (done) {
+    loadImage('scorpion-sprite.png', (imageObj) => {
+      var stage = addStage();
+      var layer = new Konva.Layer();
+      var sprite = new Konva.Sprite({
+        image: imageObj,
+        animation: 'standing',
+        animations: {
+          standing: [0, 0, 49, 109, 52, 0, 49, 109, 105, 0, 49, 109],
+        },
+        frameRate: 100,
+      });
+      layer.add(sprite);
+      stage.add(layer);
+      sprite.start();
+
+      sprite.destroy();
+      assert.equal(sprite.isRunning(), false);
+      const frameIndex = sprite.frameIndex();
+      setTimeout(() => {
+        assert.equal(
+          sprite.frameIndex(),
+          frameIndex,
+          'frame index must not advance after destroy'
+        );
+        done();
+      }, 60);
+    });
+  });
 });
