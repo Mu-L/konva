@@ -446,4 +446,56 @@ describe('Tween', function () {
     });
     tween.play();
   });
+
+  it('onUpdate and onReset are callbacks, not tweened attributes', function (done) {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20, fill: 'green' });
+    layer.add(circle);
+    stage.add(layer);
+
+    var updates = 0;
+    circle.to({
+      x: 100,
+      duration: 0.05,
+      onUpdate: function () {
+        updates++;
+      },
+      onReset: function () {},
+      onFinish: function () {
+        assert.isAbove(updates, 0);
+        assert.equal(circle.getAttr('onUpdate'), undefined);
+        assert.equal(circle.getAttr('onReset'), undefined);
+        done();
+      },
+    });
+  });
+
+  it('destroying a tween keeps the ownership of the other tweens on the node', function (done) {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({ x: 0, y: 0, radius: 20, fill: 'green' });
+    layer.add(circle);
+    stage.add(layer);
+
+    var tweenX = new Konva.Tween({ node: circle, x: 200, duration: 1 });
+    var tweenY = new Konva.Tween({ node: circle, y: 200, duration: 1 });
+    tweenX.play();
+    tweenY.play();
+    tweenX.destroy();
+
+    // a new tween on y must take y over from the still running tweenY
+    var tweenY2 = new Konva.Tween({ node: circle, y: 50, duration: 0.05 });
+    tweenY2.play();
+
+    setTimeout(function () {
+      assert.equal(circle.y(), 50);
+      // destroying the taking-over tween first must still release everything
+      tweenY2.destroy();
+      tweenY.destroy();
+      assert.equal(Konva.Tween.tweens[circle._id], undefined);
+      assert.equal(Konva.Tween.attrs[circle._id], undefined);
+      done();
+    }, 300);
+  });
 });

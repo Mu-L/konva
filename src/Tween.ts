@@ -5,11 +5,14 @@ import { Node } from './Node.ts';
 import { Konva } from './Global.ts';
 import type { Line } from './shapes/Line.ts';
 
-const blacklist = {
+// every config key that is not an attribute to tween
+const blacklist: Record<keyof TweenOwnConfig, 1> = {
     node: 1,
     duration: 1,
     easing: 1,
     onFinish: 1,
+    onUpdate: 1,
+    onReset: 1,
     yoyo: 1,
   },
   PAUSED = 1,
@@ -163,15 +166,18 @@ class TweenEngine {
   }
 }
 
-export interface TweenConfig extends NodeConfig {
+// options of the tween itself, every other TweenConfig key is a node attribute
+export interface TweenOwnConfig {
+  node: Node;
+  duration?: number;
   easing?: (typeof Easings)[keyof typeof Easings];
   yoyo?: boolean;
-  onReset?: Function;
   onFinish?: Function;
   onUpdate?: Function;
-  duration?: number;
-  node: Node;
+  onReset?: Function;
 }
+
+export interface TweenConfig extends NodeConfig, TweenOwnConfig {}
 
 /**
  * Tween constructor.  Tweens enable you to animate a node between the current state and a new state.
@@ -289,7 +295,7 @@ export class Tween {
     // remove conflict from tween map if it exists
     const tweenId = Tween.tweens[nodeId][key];
 
-    if (tweenId) {
+    if (tweenId !== undefined) {
       delete Tween.attrs[nodeId][tweenId][key];
     }
 
@@ -529,28 +535,27 @@ export class Tween {
   destroy() {
     const nodeId = this.node._id,
       thisId = this._id,
-      attrs = Tween.tweens[nodeId];
+      owned = Tween.attrs[nodeId]?.[thisId],
+      owners = Tween.tweens[nodeId];
 
     this.pause();
 
-    // Clean up animation
     if (this.anim) {
       this.anim.stop();
     }
 
-    // Clean up tween entries
-    for (const key in attrs) {
-      delete Tween.tweens[nodeId][key];
-    }
-
-    // Clean up attrs entry
-    delete Tween.attrs[nodeId][thisId];
-
-    // Clean up parent objects if empty
-    if (Tween.tweens[nodeId]) {
-      if (Object.keys(Tween.tweens[nodeId]).length === 0) {
-        delete Tween.tweens[nodeId];
+    // release only the attributes this tween still owns, other tweens on
+    // the node keep theirs (nothing left to do when destroyed twice)
+    if (owned) {
+      if (owners) {
+        for (const key in owned) {
+          delete owners[key];
+        }
+        if (Object.keys(owners).length === 0) {
+          delete Tween.tweens[nodeId];
+        }
       }
+      delete Tween.attrs[nodeId][thisId];
       if (Object.keys(Tween.attrs[nodeId]).length === 0) {
         delete Tween.attrs[nodeId];
       }
