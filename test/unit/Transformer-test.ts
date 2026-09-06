@@ -5987,4 +5987,27 @@ describe('Transformer', function () {
     simulateTouchEnd(stage, [], [resting]);
   });
 
+  it('a destroyed node is dropped from the transformer', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect1 = new Konva.Rect({ x: 50, y: 50, width: 100, height: 100 });
+    var rect2 = new Konva.Rect({ x: 200, y: 50, width: 100, height: 100 });
+    layer.add(rect1, rect2);
+    var tr = new Konva.Transformer({ nodes: [rect1, rect2] });
+    layer.add(tr);
+    layer.draw();
+
+    rect1.destroy();
+    assert.deepEqual(tr.nodes(), [rect2]);
+    assert.deepEqual(
+      { x: tr.x(), y: tr.y(), width: tr.width(), height: tr.height() },
+      { x: 200, y: 50, width: 100, height: 100 }
+    );
+
+    rect2.destroy();
+    assert.deepEqual(tr.nodes(), []);
+    assert.equal(tr.getClientRect().width, 0);
+    assert.doesNotThrow(() => layer.draw());
+  });
 });

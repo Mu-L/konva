@@ -369,13 +369,16 @@ export class Transformer extends Group {
         onChange
       );
       node.on(`absoluteTransformChange.${this._getEventNamespace()}`, onChange);
+      node.on(`destroy.${this._getEventNamespace()}`, () => {
+        // a destroyed node has nothing left to transform
+        this.setNodes(this._nodes.filter((n) => n !== node));
+      });
       this._proxyDrag(node);
     });
     this._resetTransformCache();
     // we may need it if we set node in initial props
     // so elements are not defined yet
-    const elementsCreated = !!this.findOne('.top-left');
-    if (elementsCreated) {
+    if (this._elementsCreated) {
       this.update();
     }
     return this;

@@ -423,16 +423,21 @@ export class Tween {
     }
   }
   _addListeners() {
-    // start listeners
-    this.tween.onPlay = () => {
+    // a running tween is destroyed with its node (the animation loop would
+    // keep both alive); a stopped one is not held by the node at all.
+    // The namespace contains "konva" so clone() does not copy the listener
+    const destroyEvent = `destroy.konva-tween${this._id}`;
+    const onDestroy = () => this.destroy();
+    const start = () => {
+      this.node.off(destroyEvent).on(destroyEvent, onDestroy);
       this.anim.start();
     };
-    this.tween.onReverse = () => {
-      this.anim.start();
-    };
+    this.tween.onPlay = start;
+    this.tween.onReverse = start;
 
     // stop listeners
     this.tween.onPause = () => {
+      this.node.off(destroyEvent);
       this.anim.stop();
     };
     this.tween.onFinish = () => {

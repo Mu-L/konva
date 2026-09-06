@@ -1,4 +1,4 @@
-import type { KonvaEventObject } from './Node.ts';
+import type { KonvaEventObject, Node } from './Node.ts';
 import { Konva } from './Global.ts';
 
 import type { Shape } from './Shape.ts';
@@ -53,6 +53,15 @@ export function setPointerCapture(pointerId: number, shape: Shape | Stage) {
       createEvent(new PointerEvent('gotpointercapture'))
     );
   }
+}
+
+// a destroyed node must not keep receiving the events of its pointer
+export function releaseCapturesOf(node: Node) {
+  Captures.forEach((shape, pointerId) => {
+    if (shape === node) {
+      releaseCapture(pointerId);
+    }
+  });
 }
 
 export function releaseCapture(pointerId: number, target?: Shape | Stage) {

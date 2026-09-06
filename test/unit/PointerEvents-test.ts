@@ -308,4 +308,25 @@ describe('PointerEvents capture wiring', function () {
     circle.releaseCapture(999);
     assert.equal(circle.hasPointerCapture(999), false);
   });
+
+  it('destroying a captured shape or stage releases its capture', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    circle.setPointerCapture(5);
+    assert.equal(circle.hasPointerCapture(5), true);
+    circle.destroy();
+    assert.equal(circle.hasPointerCapture(5), false);
+
+    var circle2 = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle2);
+    circle2.setPointerCapture(6);
+    stage.setPointerCapture(7);
+    stage.destroy();
+    assert.equal(circle2.hasPointerCapture(6), false);
+    assert.equal(stage.hasPointerCapture(7), false);
+  });
 });

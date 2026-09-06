@@ -308,6 +308,12 @@ export class Stage extends Container<Layer, StageConfig> {
 
   destroy() {
     super.destroy();
+    // a pending double-click timer is what closes the global double-click
+    // window, so close the window when the timer goes
+    ['mouse', 'touch', 'pointer'].forEach((type) => {
+      clearTimeout(this['_' + type + 'DblTimeout']);
+      Konva['_' + type + 'InDblClickWindow'] = false;
+    });
 
     const content = this.content;
     if (content && Util._isInDocument(content)) {
@@ -750,14 +756,14 @@ export class Stage extends Container<Layer, StageConfig> {
       let fireDblClick = false;
       if (Konva['_' + eventType + 'InDblClickWindow']) {
         fireDblClick = true;
-        clearTimeout(this[eventType + 'DblTimeout']);
+        clearTimeout(this['_' + eventType + 'DblTimeout']);
       } else if (!wasDragged) {
         // don't set inDblClickWindow after dragging
         Konva['_' + eventType + 'InDblClickWindow'] = true;
-        clearTimeout(this[eventType + 'DblTimeout']);
+        clearTimeout(this['_' + eventType + 'DblTimeout']);
       }
 
-      this[eventType + 'DblTimeout'] = setTimeout(function () {
+      this['_' + eventType + 'DblTimeout'] = setTimeout(function () {
         Konva['_' + eventType + 'InDblClickWindow'] = false;
       }, Konva.dblClickWindow);
 

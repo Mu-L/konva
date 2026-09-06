@@ -498,4 +498,60 @@ describe('Tween', function () {
       done();
     }, 300);
   });
+
+  it('destroying a node destroys its tweens', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    var tween = new Konva.Tween({
+      node: circle,
+      duration: 1,
+      x: 100,
+      yoyo: true,
+    });
+    tween.play();
+    assert.equal(tween.anim.isRunning(), true);
+
+    circle.destroy();
+    assert.equal(tween.anim.isRunning(), false);
+    assert.equal(Konva.Tween.tweens[circle._id], undefined);
+    assert.equal(Konva.Tween.attrs[circle._id], undefined);
+  });
+
+  it('a tween is held by its node only while it runs', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    var tween = new Konva.Tween({ node: circle, duration: 1, x: 100 });
+    assert.isUndefined(circle.eventListeners.destroy);
+    tween.play();
+    assert.equal(circle.eventListeners.destroy.length, 1);
+    tween.play();
+    assert.equal(circle.eventListeners.destroy.length, 1);
+    tween.finish();
+    assert.isUndefined(circle.eventListeners.destroy);
+  });
+
+  it('destroying a clone of the node does not touch the tween of the original', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    var tween = new Konva.Tween({ node: circle, duration: 1, x: 100 });
+    tween.play();
+    var clone = circle.clone();
+    layer.add(clone);
+    clone.destroy();
+    assert.equal(tween.anim.isRunning(), true);
+    tween.seek(0.5);
+    tween.destroy();
+  });
 });

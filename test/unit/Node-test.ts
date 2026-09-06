@@ -998,6 +998,7 @@ describe('Node', function () {
             skewY: -2,
             easing: 'ease-in-out'
 
+
         })
         */
   });
@@ -3954,6 +3955,26 @@ describe('Node', function () {
     m[4] = 100;
     assert.deepEqual(tr.m, [1, 2, 3, 4, 5, 6]);
     assert.deepEqual(new Konva.Transform().m, [1, 0, 0, 1, 0, 0]);
+  });
+
+  it('destroy() fires a destroy event on the node and its descendants', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var group = new Konva.Group();
+    var rect = new Konva.Rect();
+    group.add(rect);
+    layer.add(group);
+
+    var events: string[] = [];
+    rect.on('destroy', (e) => {
+      assert.strictEqual(e.target, rect);
+      events.push('rect');
+    });
+    group.on('destroy', () => events.push('group'));
+
+    group.destroy();
+    assert.deepEqual(events, ['rect', 'group']);
   });
 
   it('a prototype listener added after an instance fired the event is picked up', function () {

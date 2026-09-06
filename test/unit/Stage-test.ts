@@ -17,6 +17,7 @@ import {
   Konva,
   createCanvasAndContext,
   collectCanvasAllocations,
+  countCalls,
 } from './test-utils.ts';
 
 describe('Stage', function () {
@@ -1632,5 +1633,36 @@ describe('Stage', function () {
       .getContext('2d')!
       .getImageData(100, 100, 1, 1).data;
     assert.deepEqual(Array.from(pixel), [255, 0, 0, 255]);
+  });
+
+  it('destroy() clears the double-click timers', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    simulateMouseDown(stage, { x: 10, y: 10 });
+    simulateMouseUp(stage, { x: 10, y: 10 });
+    assert.isDefined(stage._mouseDblTimeout);
+
+    var cleared = countCalls(globalThis, 'clearTimeout', () => stage.destroy());
+    assert.isAtLeast(cleared, 3);
+  });
+
+  it('destroy() closes the double-click window it opened', function () {
+    var stage = addStage();
+    stage.add(new Konva.Layer());
+    simulateMouseDown(stage, { x: 10, y: 10 });
+    simulateMouseUp(stage, { x: 10, y: 10 });
+    assert.equal(Konva._mouseInDblClickWindow, true);
+    stage.destroy();
+    assert.equal(Konva._mouseInDblClickWindow, false);
+
+    var stage2 = addStage();
+    stage2.add(new Konva.Layer());
+    var dblclicks = 0;
+    stage2.on('dblclick', () => dblclicks++);
+    simulateMouseDown(stage2, { x: 10, y: 10 });
+    simulateMouseUp(stage2, { x: 10, y: 10 });
+    assert.equal(dblclicks, 0);
   });
 });

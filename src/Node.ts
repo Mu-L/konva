@@ -4,6 +4,7 @@ import type { Container } from './Container.ts';
 import type { Context } from './Context.ts';
 import { isCSSFiltersSupported } from './Context.ts';
 import { DD } from './DragAndDrop.ts';
+import * as PointerEvents from './PointerEvents.ts';
 import { Factory } from './Factory.ts';
 import { Konva } from './Global.ts';
 import type { Layer } from './Layer.ts';
@@ -835,7 +836,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   /**
    * bind events to the node. KonvaJS supports mouseover, mousemove,
    *  mouseout, mouseenter, mouseleave, mousedown, mouseup, wheel, contextmenu, click, dblclick, touchstart, touchmove,
-   *  touchend, tap, dbltap, dragstart, dragmove, and dragend events.
+   *  touchend, tap, dbltap, dragstart, dragmove, dragend and destroy events.
    *  Pass in a string of events delimited by a space to bind multiple events at once
    *  such as 'mousedown mouseup mousemove'. Include a namespace to bind an
    *  event by name such as 'click.foobar'.
@@ -1074,12 +1075,17 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   /**
    * remove and destroy a node. Kill it and delete forever! You should not reuse node after destroy().
    * If the node is a container (Group, Stage or Layer) it will destroy all children too.
+   * The node fires a `destroy` event first, so anything holding a reference to it can let go.
+   * When an ancestor is being destroyed the node is already detached from its parent at that point.
    * @method
    * @name Konva.Node#destroy
    * @example
+   * node.on('destroy', () => console.log('gone'));
    * node.destroy();
    */
   destroy() {
+    this._fire('destroy', { target: this });
+    PointerEvents.releaseCapturesOf(this);
     this.remove();
     this.clearCache();
     return this;
