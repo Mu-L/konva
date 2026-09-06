@@ -135,7 +135,7 @@ export class Path extends Shape<PathConfig> {
               data.points[2],
               data.points[3],
               t,
-              0
+              data.points[6]
             );
             points.push(point.x, point.y);
           }
@@ -148,7 +148,7 @@ export class Path extends Shape<PathConfig> {
               data.points[2],
               data.points[3],
               t,
-              0
+              data.points[6]
             );
             points.push(point.x, point.y);
           }
@@ -193,6 +193,9 @@ export class Path extends Shape<PathConfig> {
         points = points.concat(data.points);
       }
     });
+    if (!points.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
     let minX = points[0];
     let maxX = points[0];
     let minY = points[1];
@@ -272,15 +275,12 @@ export class Path extends Shape<PathConfig> {
     }
 
     if (i === ii) {
-      let j = i - 1;
-      while (j > 0 && dataArray[j].points.length < 2) {
-        j--;
+      // past the end: the end of the last segment
+      i--;
+      while (i > 0 && dataArray[i].points.length < 2) {
+        i--;
       }
-      points = dataArray[j].points.slice(-2);
-      return {
-        x: points[0],
-        y: points[1],
-      };
+      length = dataArray[i].pathLength;
     }
 
     if (length < 0.01) {
@@ -306,7 +306,7 @@ export class Path extends Shape<PathConfig> {
         return Path.getPointOnLine(length, cp.start.x, cp.start.y, p[0], p[1]);
       case 'C':
         return Path.getPointOnCubicBezier(
-          t2length(length, Path.getPathLength(dataArray), (i) => {
+          t2length(length, cp.pathLength, (i) => {
             return getCubicArcLength(
               [cp.start.x, p[0], p[2], p[4]],
               [cp.start.y, p[1], p[3], p[5]],
@@ -324,7 +324,7 @@ export class Path extends Shape<PathConfig> {
         );
       case 'Q':
         return Path.getPointOnQuadraticBezier(
-          t2length(length, Path.getPathLength(dataArray), (i) => {
+          t2length(length, cp.pathLength, (i) => {
             return getQuadraticArcLength(
               [cp.start.x, p[0], p[2]],
               [cp.start.y, p[1], p[3]],
@@ -544,80 +544,27 @@ export class Path extends Shape<PathConfig> {
         coords.push(match[0]);
       }
 
-      // while ((match = re.exec(str))) {
-      //   coords.push(match[0]);
-      // }
       let p: number[] = [];
       // Track param position for A/a commands: 0..6 => rx, ry, psi, fa, fs, x, y
       let arcParamIndex = c === 'A' || c === 'a' ? 0 : -1;
 
       for (let j = 0, jlen = coords.length; j < jlen; j++) {
-        const token = coords[j];
-        // extra case for merged flags
-        if (token === '00') {
-          p.push(0, 0);
-          if (arcParamIndex >= 0) {
-            arcParamIndex += 2;
-            if (arcParamIndex >= 7) arcParamIndex -= 7;
-          }
-          continue;
+        let token = coords[j];
+        // SVGO merges the arc flags with the number that follows them:
+        // "01.5.5" is fa=0 fs=1 x=.5 y=.5
+        while (
+          (arcParamIndex === 3 || arcParamIndex === 4) &&
+          token.length > 1 &&
+          (token[0] === '0' || token[0] === '1')
+        ) {
+          p.push(+token[0]);
+          arcParamIndex++;
+          token = token.slice(1);
         }
+        const parsed = parseFloat(token);
+        p.push(isNaN(parsed) ? 0 : parsed);
         if (arcParamIndex >= 0) {
-          // index-aware minimal handling for merged flags
-          if (arcParamIndex === 3) {
-            // expecting large-arc-flag; token may contain fa+fs(+x)
-            if (/^[01]{2}\d+(?:\.\d+)?$/.test(token)) {
-              p.push(parseInt(token[0], 10));
-              p.push(parseInt(token[1], 10));
-              p.push(parseFloat(token.slice(2)));
-              arcParamIndex += 3;
-              if (arcParamIndex >= 7) arcParamIndex -= 7;
-              continue;
-            }
-            if (token === '11' || token === '10' || token === '01') {
-              p.push(parseInt(token[0], 10));
-              p.push(parseInt(token[1], 10));
-              arcParamIndex += 2;
-              if (arcParamIndex >= 7) arcParamIndex -= 7;
-              continue;
-            }
-            if (token === '0' || token === '1') {
-              p.push(parseInt(token, 10));
-              arcParamIndex += 1;
-              if (arcParamIndex >= 7) arcParamIndex -= 7;
-              continue;
-            }
-          } else if (arcParamIndex === 4) {
-            // expecting sweep-flag; token may contain fs(+x)
-            if (/^[01]\d+(?:\.\d+)?$/.test(token)) {
-              p.push(parseInt(token[0], 10));
-              p.push(parseFloat(token.slice(1)));
-              arcParamIndex += 2;
-              if (arcParamIndex >= 7) arcParamIndex -= 7;
-              continue;
-            }
-            if (token === '0' || token === '1') {
-              p.push(parseInt(token, 10));
-              arcParamIndex += 1;
-              if (arcParamIndex >= 7) arcParamIndex -= 7;
-              continue;
-            }
-          }
-          const parsedArc = parseFloat(token);
-          if (!isNaN(parsedArc)) {
-            p.push(parsedArc);
-          } else {
-            p.push(0);
-          }
-          arcParamIndex += 1;
-          if (arcParamIndex >= 7) arcParamIndex -= 7;
-        } else {
-          const parsed = parseFloat(token);
-          if (!isNaN(parsed)) {
-            p.push(parsed);
-          } else {
-            p.push(0);
-          }
+          arcParamIndex = (arcParamIndex + 1) % 7;
         }
       }
 

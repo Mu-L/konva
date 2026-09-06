@@ -12,6 +12,7 @@ import {
   isNode,
   assertAlmostDeepEqual,
   isBrowser,
+  countCalls,
 } from './test-utils.ts';
 
 describe('Path', function () {
@@ -1286,15 +1287,15 @@ describe('Path', function () {
         { x: 113.1614217949117, y: 116.85606400569954 },
         { x: 129.4878585660311, y: 133.42835616090537 },
         { x: 149.41138859764925, y: 149.5706857234721 },
-        { x: 159.43138712714935, y: 133.06025615594774 },
-        { x: 175.3017710206886, y: 122.31378864213205 },
-        { x: 194.92856277944335, y: 115.73314636675508 },
-        { x: 214.84499816899648, y: 112.85265466076682 },
-        { x: 234.86585690487928, y: 112.83275701234302 },
-        { x: 254.65745479392615, y: 115.6401774356189 },
-        { x: 273.58108654098885, y: 121.79846344304384 },
-        { x: 289.93157588171135, y: 132.43782950384232 },
-        { x: 299.87435436448743, y: 149.4028482225714 },
+        { x: 159.20708002085948, y: 133.28578227257518 },
+        { x: 175.70922506338707, y: 122.12331879451641 },
+        { x: 194.54023110281022, y: 115.8217874339532 },
+        { x: 214.49689229486697, y: 112.87738914026215 },
+        { x: 234.43408471752622, y: 112.8041356036109 },
+        { x: 254.393697539885, y: 115.58176060030762 },
+        { x: 273.2842746667944, y: 121.665139873788 },
+        { x: 290.0188216211262, y: 132.52155112831736 },
+        { x: 299.8957407073753, y: 149.50043318120942 },
       ]);
     }
   });
@@ -1430,13 +1431,13 @@ describe('Path', function () {
 
       assert.deepEqual(points, [
         { x: 100, y: 250 },
-        { x: 88.80979830887104, y: 261.9310198815103 },
-        { x: 296.17215373535686, y: 105.30891997028526 },
-        { x: 207.5911710830848, y: 414.96086124898176 },
-        { x: 410.01622229664224, y: 202.72024124427364 },
-        { x: 374.86125434742394, y: 318.78396882819396 },
-        { x: 392.21257855027216, y: 483.8201732191269 },
-        { x: 572.3287288437606, y: 447.38305323763467 },
+        { x: 88.81046942782544, y: 261.92616969480423 },
+        { x: 296.43785000464806, y: 105.03863655128791 },
+        { x: 207.8940154719443, y: 414.51579926777714 },
+        { x: 410.1260983224354, y: 202.53685229970446 },
+        { x: 377.44353207496624, y: 316.156567955128 },
+        { x: 391.99447172783215, y: 484.6253299038601 },
+        { x: 570.9713505795695, y: 450.9214513173592 },
       ]);
     }
     stage.add(layer);
@@ -1867,5 +1868,100 @@ describe('Path', function () {
       trace,
       'clearRect(0,0,578,200);save();transform(1,0,0,1,0,0);beginPath();moveTo(200,100);lineTo(300,100);lineTo(300,150);closePath();fillStyle=#ccc;fill(evenodd);restore();'
     );
+  });
+
+  it('getSelfRect honours the x-axis rotation of an arc', function () {
+    var path = new Konva.Path({ data: 'M0,0 A50,20 60 0 1 60,40' });
+    var length = path.getLength();
+    var minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (var i = 0; i <= 400; i++) {
+      var p = path.getPointAtLength((length * i) / 400)!;
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    assertAlmostDeepEqual(
+      path.getSelfRect(),
+      { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+      0.5
+    );
+  });
+
+  it('getSelfRect of a path without data is an empty rect', function () {
+    [{}, { data: 'z' }].forEach((config) => {
+      assert.deepEqual(new Konva.Path(config).getSelfRect(), {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      });
+    });
+
+    var group = new Konva.Group();
+    group.add(new Konva.Rect({ x: 10, y: 20, width: 30, height: 40 }));
+    group.add(new Konva.Path({}));
+    assert.deepEqual(group.getClientRect(), {
+      x: 10,
+      y: 20,
+      width: 30,
+      height: 40,
+    });
+  });
+
+  it('parses SVGO-compressed arc flags merged with the coordinate that follows', function () {
+    [
+      ['M0,0 a5 5 0 01.5.5', { x: 0.5, y: 0.5 }],
+      ['M0,0 a5 5 0 0 1.5.5', { x: 0.5, y: 0.5 }],
+      ['M0,0 a5 5 0 01.5e1.5e1', { x: 5, y: 5 }],
+    ].forEach(([data, end]: any) => {
+      var path = new Konva.Path({ data });
+      assert.equal(path.dataArray[1].command, 'A', data);
+      assertAlmostDeepEqual(path.getPointAtLength(path.getLength()), end, 0.01);
+    });
+  });
+
+  it('parses a "00" coordinate outside of an arc as one number', function () {
+    var segments = Konva.Path.parsePathData('M00 10 L5 5');
+    assert.equal(segments.length, 2);
+    assert.deepEqual(segments[0].points, [0, 10]);
+    assert.deepEqual(segments[1].points, [5, 5]);
+
+    var arc = Konva.Path.parsePathData('M0 0 a5 5 0 00 10 10')[1];
+    assert.equal(arc.command, 'A');
+    assert.isTrue(arc.points.every((p) => isFinite(p)));
+  });
+
+  it('getPointAtLength past the end of a path ending with an arc returns the end point', function () {
+    var path = new Konva.Path({ data: 'M0,0 A10,10 0 0 1 20,0' });
+    assertAlmostDeepEqual(path.getPointAtLength(1000), { x: 20, y: 0 }, 0.01);
+  });
+
+  it('getPointAtLength inside a curve is not affected by the segments before it', function () {
+    var curve = 'C10000,0 10100,200 10200,0';
+    var multi = new Konva.Path({ data: 'M0,0 L10000,0 ' + curve });
+    var single = new Konva.Path({ data: 'M10000,0 ' + curve });
+    var curveLength = single.getLength();
+
+    [0.1, 0.25, 0.5, 0.75, 0.9].forEach((f) => {
+      var expected = single.getPointAtLength(f * curveLength)!;
+      var actual = multi.getPointAtLength(10000 + f * curveLength)!;
+      var distance = Math.hypot(actual.x - expected.x, actual.y - expected.y);
+      assert.isBelow(distance, 0.5, 'fraction ' + f);
+    });
+  });
+
+  it('getPointAtLength does not recompute the whole path length', function () {
+    var path = new Konva.Path({
+      data: 'M0,0 L100,0 C100,0 200,100 300,0 Q350,50 400,0',
+    });
+    var calls = countCalls(Konva.Path, 'getPathLength', () => {
+      path.getPointAtLength(150);
+      path.getPointAtLength(350);
+    });
+    assert.equal(calls, 0);
   });
 });

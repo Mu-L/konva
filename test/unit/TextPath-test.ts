@@ -935,7 +935,7 @@ describe('TextPath', function () {
     var rect = textpath.getClientRect();
 
     // just different results in different envs
-    assert.equal(Math.round(rect.height), 330, 'check height');
+    assert.equal(Math.round(rect.height), 331, 'check height');
 
     textpath.text('');
     rect = textpath.getClientRect();
