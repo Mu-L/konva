@@ -846,12 +846,6 @@ export class Shape<
   fillLinearGradientEndPoint: GetSet<Vector2d, this>;
   fillLinearGradientEndPointX: GetSet<number, this>;
   fillLinearGradientEndPointY: GetSet<number, this>;
-  fillLinearRadialStartPoint: GetSet<Vector2d, this>;
-  fillLinearRadialStartPointX: GetSet<number, this>;
-  fillLinearRadialStartPointY: GetSet<number, this>;
-  fillLinearRadialEndPoint: GetSet<Vector2d, this>;
-  fillLinearRadialEndPointX: GetSet<number, this>;
-  fillLinearRadialEndPointY: GetSet<number, this>;
   fillPatternImage: GetSet<HTMLImageElement | HTMLCanvasElement, this>;
   fillRadialGradientStartRadius: GetSet<number, this>;
   fillRadialGradientEndRadius: GetSet<number, this>;
