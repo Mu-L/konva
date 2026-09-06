@@ -312,8 +312,10 @@ export class Layer extends Container<Group | Shape> {
       // ask the window the stage is rendered in for the frame: a stage in a
       // popout window keeps drawing while the opener window is not visible
       Util.requestAnimFrame(() => {
-        this.draw();
+        // reset before drawing, so a throwing draw does not freeze the layer
+        // and a draw handler can request the next frame
         this._waitingForDraw = false;
+        this.draw();
       }, this.getStage()?._getOwnerWindow());
     }
     return this;

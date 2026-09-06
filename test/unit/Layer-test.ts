@@ -524,4 +524,23 @@ describe('Layer', function () {
     assert.equal(layer.hitCanvas.width, stage.width());
     assert.equal(layer.getIntersection({ x: 20, y: 20 }), rect);
   });
+
+  it('batchDraw() requested from a draw handler schedules another draw', function (done) {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+
+    let draws = 0;
+    layer.on('draw', function () {
+      draws++;
+      if (draws === 1) {
+        layer.batchDraw();
+      } else {
+        // the stage teardown of the next test draws this layer again
+        layer.off('draw');
+        done();
+      }
+    });
+    layer.batchDraw();
+  });
 });
