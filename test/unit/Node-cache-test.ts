@@ -1709,4 +1709,102 @@ describe('Caching', function () {
     assert.equal(stage.getIntersection({ x: 150, y: 100 }), rect);
     assert.equal(stage.getIntersection({ x: 20, y: 20 }), null);
   });
+
+  // records the bitmap size of every canvas allocation made while fn runs
+  function collectCanvasAllocations(fn: () => void) {
+    const allocations: Array<{ canvas: any; width: number; height: number }> =
+      [];
+    const originalSetSize = Konva.Canvas.prototype.setSize;
+    Konva.Canvas.prototype.setSize = function (width, height) {
+      originalSetSize.call(this, width, height);
+      allocations.push({
+        canvas: this,
+        width: this.width,
+        height: this.height,
+      });
+    };
+    try {
+      fn();
+    } finally {
+      Konva.Canvas.prototype.setSize = originalSetSize;
+    }
+    return allocations.filter(({ width }) => width > 0);
+  }
+
+  it('cache() allocates only the cache canvas when no shape needs the buffer', function () {
+    // geometry far from the node's own origin used to inflate the buffer
+    // canvas by the offset (5100x5100 for a 102x102 cache)
+    var line = new Konva.Line({
+      points: [5000, 5000, 5100, 5100],
+      stroke: 'black',
+      strokeWidth: 2,
+    });
+
+    const allocations = collectCanvasAllocations(() => line.cache());
+
+    assert.deepEqual(
+      allocations.map(({ canvas }) => canvas),
+      [line._getCanvasCache().scene]
+    );
+  });
+
+  it('cache() buffer canvas is never larger than the cache and is released', function () {
+    // fill + stroke + opacity forces the buffer canvas path
+    var rect = new Konva.Rect({
+      x: 5000,
+      y: 4000,
+      width: 100,
+      height: 100,
+      fill: 'red',
+      stroke: 'black',
+      strokeWidth: 4,
+      opacity: 0.5,
+    });
+
+    const allocations = collectCanvasAllocations(() => rect.cache());
+    const scene = rect._getCanvasCache().scene;
+
+    assert.equal(allocations.length, 2, 'cache canvas and buffer canvas');
+    allocations.forEach(({ canvas, width, height }) => {
+      assert.isAtMost(width, scene.width);
+      assert.isAtMost(height, scene.height);
+      if (canvas !== scene) {
+        assert.equal(canvas._canvas.width, 0, 'buffer canvas is released');
+      }
+    });
+  });
+
+  it('toCanvas() buffer canvas is never larger than the export, is released, and renders the same anywhere', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      x: 5000,
+      y: 4000,
+      width: 100,
+      height: 100,
+      fill: 'red',
+      stroke: 'black',
+      strokeWidth: 4,
+      opacity: 0.5,
+    });
+    layer.add(rect);
+
+    let exported;
+    const allocations = collectCanvasAllocations(() => {
+      exported = rect.toCanvas();
+    });
+
+    assert.equal(allocations.length, 2, 'export canvas and buffer canvas');
+    allocations.forEach(({ canvas, width, height }) => {
+      assert.isAtMost(width, exported.width);
+      assert.isAtMost(height, exported.height);
+      if (canvas._canvas !== exported) {
+        assert.equal(canvas._canvas.width, 0, 'buffer canvas is released');
+      }
+    });
+
+    rect.position({ x: 0, y: 0 });
+    compareCanvases(exported, rect.toCanvas(), 10);
+  });
 });

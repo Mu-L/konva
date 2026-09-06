@@ -645,15 +645,22 @@ export class Shape<
       stage = this.getStage();
       const bc = bufferCanvas || stage._syncBufferSize(stage.bufferCanvas);
       const bufferContext = bc.getContext();
-      // When caching, the buffer canvas may have a translation applied.
-      // We need to reset the transform before clearing to ensure the entire canvas is cleared.
-      if (bufferCanvas) {
+      if (!bufferCanvas) {
+        bufferContext.clear();
+      } else if (!bc.width) {
+        // cache() and toCanvas() hand over an empty buffer: size it to the
+        // destination on first use and shift it to the buffer origin
+        bc.setSize(
+          canvas.width / canvas.pixelRatio,
+          canvas.height / canvas.pixelRatio
+        );
+        bufferContext.translate(-bc.x, -bc.y);
+      } else {
+        // the buffer is translated, so reset the transform before clearing
         bufferContext.save();
         bufferContext.setTransform(1, 0, 0, 1, 0, 0);
         bufferContext.clearRect(0, 0, bc.width, bc.height);
         bufferContext.restore();
-      } else {
-        bufferContext.clear();
       }
       bufferContext.save();
       // the buffer canvas is a separate context that does not inherit the
@@ -689,8 +696,8 @@ export class Shape<
 
       context.drawImage(
         bc._canvas,
-        bc.x || 0,
-        bc.y || 0,
+        bc.x,
+        bc.y,
         bc.width / ratio,
         bc.height / ratio
       );

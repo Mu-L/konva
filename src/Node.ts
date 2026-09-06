@@ -245,6 +245,21 @@ export type ImageConfig = CanvasConfig & {
  * @param {Object} config
  * @@nodeParams
  */
+// "perfect drawing" buffer for cache() and toCanvas(): it mirrors the target
+// canvas and is drawn back at (x, y) in the target's coordinate space.
+// It starts empty and Shape.drawScene sizes it on first use, so nodes
+// without buffered shapes never allocate it.
+function createBufferCanvas(target: SceneCanvas, x: number, y: number) {
+  const bufferCanvas = new SceneCanvas({
+    width: 0,
+    height: 0,
+    pixelRatio: target.pixelRatio,
+  });
+  bufferCanvas.x = x;
+  bufferCanvas.y = y;
+  return bufferCanvas;
+}
+
 export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _id = idCounter++;
   eventListeners: {
@@ -499,17 +514,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }),
       sceneContext = cachedSceneCanvas.getContext();
 
-    const bufferCanvas = new SceneCanvas({
-        // width and height already multiplied by pixelRatio
-        // so we need to revert that
-        // also increase size by x nd y offset to make sure content fits canvas
-        width:
-          cachedSceneCanvas.width / cachedSceneCanvas.pixelRatio + Math.abs(x),
-        height:
-          cachedSceneCanvas.height / cachedSceneCanvas.pixelRatio + Math.abs(y),
-        pixelRatio: cachedSceneCanvas.pixelRatio,
-      }),
-      bufferContext = bufferCanvas.getContext();
+    const bufferCanvas = createBufferCanvas(cachedSceneCanvas, x, y);
 
     cachedSceneCanvas.isCache = true;
 
@@ -522,20 +527,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
 
     sceneContext.save();
-    bufferContext.save();
-
     sceneContext.translate(-x, -y);
-    bufferContext.translate(-x, -y);
-    // hard-code offset to make sure content fits canvas
-    // @ts-ignore
-    bufferCanvas.x = x;
-    // @ts-ignore
-    bufferCanvas.y = y;
 
     // extra flag to skip on getAbsolute opacity calc
     this._isUnderCache = true;
     this._clearSelfAndDescendantCache(ABSOLUTE_OPACITY);
-    this._clearSelfAndDescendantCache(ABSOLUTE_SCALE);
 
     this.drawScene(cachedSceneCanvas, this, bufferCanvas);
     this._isUnderCache = false;
@@ -555,8 +551,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       sceneContext.restore();
     }
 
-    // Release buffer canvas immediately - it's only needed during initial cache drawing
-    // This significantly reduces memory usage for cached nodes
+    // the buffer is only needed while drawing
     Util.releaseCanvas(bufferCanvas._canvas);
 
     this._cache.set(CANVAS, {
@@ -2142,14 +2137,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }),
       context = canvas.getContext();
 
-    const bufferCanvas = new SceneCanvas({
-      // width and height already multiplied by pixelRatio
-      // so we need to revert that
-      // also increase size by x nd y offset to make sure content fits canvas
-      width: canvas.width / canvas.pixelRatio + Math.abs(x),
-      height: canvas.height / canvas.pixelRatio + Math.abs(y),
-      pixelRatio: canvas.pixelRatio,
-    });
+    const bufferCanvas = createBufferCanvas(canvas, x, y);
 
     if (config.imageSmoothingEnabled === false) {
       context._context.imageSmoothingEnabled = false;
@@ -2162,6 +2150,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     this.drawScene(canvas, undefined, bufferCanvas);
     context.restore();
+    // the buffer is only needed while drawing
+    Util.releaseCanvas(bufferCanvas._canvas);
 
     return canvas;
   }

@@ -52,6 +52,10 @@ export class Canvas {
   height = 0;
 
   isCache = false;
+  // origin of a buffer canvas in the coordinate space of the canvas it is
+  // drawn back into, see Shape.drawScene
+  x = 0;
+  y = 0;
 
   constructor(config: ICanvasConfig) {
     const conf = config || {};
