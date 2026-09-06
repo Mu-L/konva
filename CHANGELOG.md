@@ -11,6 +11,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - A chain of filter functions uploads the image data once instead of after every filter, and changing a filter attribute no longer reallocates the filter canvas when its size is unchanged
 - Fixed `Konva.Sprite` keeping its frame interval running after `destroy()`
 - Removed unused `Konva.Node` internals (`_setComponentAttr`, the `allEventListeners` and `absoluteScale` cache keys)
+- Fixed `clearCache()` of a container silently un-caching every descendant (their filters stopped applying) and leaking their canvases. Re-caching a node now releases the canvases of its previous cache
+- Fixed `setAbsolutePosition()`, and so dragging, writing `NaN` into `x`/`y` when an ancestor has a zero scale. The position is kept and a warning is logged. Added `Konva.Transform#isInvertible()`
+- Fixed a negative `radius` of `Konva.Circle`, `Konva.Ellipse`, `Konva.Arc`, `Konva.Wedge` and `Konva.Ring`, and a negative `cornerRadius` of `Konva.Rect`, `Konva.Image` and `Konva.Tag`, throwing a `RangeError` inside the frame callback and blanking every shape drawn after them. A negative radius now renders as its absolute value, a negative corner radius as no rounding
+- Fixed `layer.batchDraw()` never drawing again after a draw threw, and dropping a `batchDraw()` requested from a `draw` handler
+- Fixed `Konva.Filters.Blur` clipping the colour of semi-transparent pixels and blackening transparent edges. A `blurRadius` above 180 produced a fully transparent image and is now capped at 180, and 1-pixel-tall images are no longer blurred to nothing. Opaque content renders exactly as before
+- Fixed `Konva.Tween`: `onUpdate` and `onReset` were tweened as node attributes, the very first tween of a page could not be cancelled by a later tween of the same attribute, `destroy()` erased the ownership of the other tweens on the node so they could no longer be taken over, and a second `destroy()` threw
+- Reduced memory usage of `stage.toCanvas()`/`toDataURL()`/`toImage()`: the canvas each layer is rendered into is released after the export, and exports with a given `x`/`y`/`width`/`height` no longer walk the whole node tree for a client rect
 
 ## 10.3.3 (2026-09-04)
 
