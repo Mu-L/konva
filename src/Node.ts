@@ -1439,15 +1439,19 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     // important, use non cached value
     this._clearCache(TRANSFORM);
     const it = this._getAbsoluteTransform().copy();
+    const invertible = it.isInvertible();
 
     it.invert();
     it.translate(pos.x, pos.y);
-    pos = {
-      x: this.attrs.x + it.getTranslation().x,
-      y: this.attrs.y + it.getTranslation().y,
-    };
+    const { x: dx, y: dy } = it.getTranslation();
     this._setTransform(origTrans);
-    this.setPosition({ x: pos.x, y: pos.y });
+    if (invertible) {
+      this.setPosition({ x: this.attrs.x + dx, y: this.attrs.y + dy });
+    } else {
+      Util.warn(
+        'Cannot set the absolute position: the absolute transform is not invertible (an ancestor has a zero scale).'
+      );
+    }
     this._clearCache(TRANSFORM);
     this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
 

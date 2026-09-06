@@ -203,6 +203,10 @@ export class Transform {
    * @name Konva.Transform#invert
    * @returns {Konva.Transform}
    */
+  // a transform with a zero scale on an axis has no inverse
+  isInvertible() {
+    return this.m[0] * this.m[3] - this.m[1] * this.m[2] !== 0;
+  }
   invert() {
     const d = 1 / (this.m[0] * this.m[3] - this.m[1] * this.m[2]);
     const m0 = this.m[3] * d;

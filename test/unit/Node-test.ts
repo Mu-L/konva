@@ -3876,4 +3876,18 @@ describe('Node', function () {
     assert.equal(circle.getRelativePointerPosition()?.x, -50);
     assert.equal(circle.getRelativePointerPosition()?.y, 0);
   });
+
+  it('setAbsolutePosition() under an ancestor with a zero scale keeps the position finite', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var group = new Konva.Group({ scaleX: 0 });
+    var rect = new Konva.Rect({ x: 5, y: 5, width: 10, height: 10 });
+    group.add(rect);
+    layer.add(group);
+    stage.add(layer);
+
+    rect.setAbsolutePosition({ x: 20, y: 20 });
+
+    assert.deepEqual(rect.position(), { x: 5, y: 5 });
+  });
 });
