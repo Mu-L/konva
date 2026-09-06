@@ -120,21 +120,10 @@ export class Canvas {
     );
   }
   setWidth(width) {
-    // take into account pixel ratio
-    this.width = this._canvas.width = width * this.pixelRatio;
-    this._canvas.style.width = width + 'px';
-
-    const pixelRatio = this.pixelRatio,
-      _context = this.getContext()._context;
-    _context.scale(pixelRatio, pixelRatio);
+    this.setSize(width, this.height / this.pixelRatio);
   }
   setHeight(height) {
-    // take into account pixel ratio
-    this.height = this._canvas.height = height * this.pixelRatio;
-    this._canvas.style.height = height + 'px';
-    const pixelRatio = this.pixelRatio,
-      _context = this.getContext()._context;
-    _context.scale(pixelRatio, pixelRatio);
+    this.setSize(this.width / this.pixelRatio, height);
   }
   getWidth() {
     return this.width;
@@ -143,8 +132,16 @@ export class Canvas {
     return this.height;
   }
   setSize(width, height) {
-    this.setWidth(width || 0);
-    this.setHeight(height || 0);
+    width = width || 0;
+    height = height || 0;
+    const pixelRatio = this.pixelRatio;
+    // take into account pixel ratio. Assigning a dimension reallocates the
+    // bitmap and resets the whole context state, so scale once after both
+    this.width = this._canvas.width = width * pixelRatio;
+    this.height = this._canvas.height = height * pixelRatio;
+    this._canvas.style.width = width + 'px';
+    this._canvas.style.height = height + 'px';
+    this.getContext()._context.scale(pixelRatio, pixelRatio);
   }
   // setSize() re-allocates and clears the canvas even for the same size,
   // so lazily sized canvases use this to stay untouched when nothing changed

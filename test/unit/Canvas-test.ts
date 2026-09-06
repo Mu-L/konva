@@ -1,5 +1,6 @@
 import { assert } from 'chai';
-import { addStage, Konva } from './test-utils.ts';
+import { addStage, Konva, countCalls } from './test-utils.ts';
+import { SceneCanvas } from '../../src/Canvas.ts';
 
 describe('Canvas', function () {
   // ======================================================
@@ -38,5 +39,20 @@ describe('Canvas', function () {
     assert.equal(layer.getCanvas().height, 200);
 
     layer.draw();
+  });
+
+  it('setSize() sizes the bitmap and scales the context once', function () {
+    var canvas = new SceneCanvas({ width: 10, height: 10, pixelRatio: 2 });
+    const scales = countCalls(canvas.getContext()._context, 'scale', () => {
+      canvas.setSize(100, 50);
+    });
+
+    assert.equal(canvas.width, 200);
+    assert.equal(canvas.height, 100);
+    assert.equal(canvas._canvas.width, 200);
+    assert.equal(canvas._canvas.height, 100);
+    assert.equal(canvas._canvas.style.width, '100px');
+    assert.equal(canvas._canvas.style.height, '50px');
+    assert.equal(scales, 1);
   });
 });

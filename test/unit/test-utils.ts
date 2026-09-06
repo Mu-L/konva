@@ -185,6 +185,22 @@ export function collectCanvasAllocations(fn: () => void) {
   return allocations.filter(({ width }) => width > 0);
 }
 
+// runs fn and returns how many times obj[method] was called meanwhile
+export function countCalls(obj: any, method: string, fn: () => void) {
+  const original = obj[method];
+  let count = 0;
+  obj[method] = function (...args) {
+    count++;
+    return original.apply(this, args);
+  };
+  try {
+    fn();
+  } finally {
+    obj[method] = original;
+  }
+  return count;
+}
+
 export function createCanvasAndContext() {
   const canvas = Konva.Util.createCanvasElement();
   canvas.width = 578 * Konva.pixelRatio;
