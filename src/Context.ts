@@ -104,15 +104,12 @@ export function isCSSFiltersSupported(): boolean {
   try {
     const canvas = Util.createCanvasElement();
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      _cssFiltersSupported = false;
-      return false;
-    }
-    return !!ctx && 'filter' in ctx;
+    _cssFiltersSupported = !!ctx && 'filter' in ctx;
+    Util.releaseCanvas(canvas);
   } catch (e) {
     _cssFiltersSupported = false;
-    return false;
   }
+  return _cssFiltersSupported;
 }
 
 interface ExtendedCanvasRenderingContext2D extends CanvasRenderingContext2D {
