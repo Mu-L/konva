@@ -9,6 +9,7 @@ import {
   loadImage,
   isBrowser,
   compareCanvases,
+  countCalls,
 } from './test-utils.ts';
 import { stringToArray } from '../../src/shapes/Text.ts';
 
@@ -2141,4 +2142,19 @@ describe('Text', function () {
       Array.from({ length: graphemes }, (_, i) => i)
     );
   });
+
+  it('stringToArray keeps flags, ZWJ sequences and combining marks together', function () {
+    assert.deepEqual(stringToArray('🇺🇸👨‍👩‍👧👧🏿éa'), ['🇺🇸', '👨‍👩‍👧', '👧🏿', 'é', 'a']);
+  });
+
+  it('letterSpacing adds one spacing per grapheme, like the per-character rendering does', function () {
+    var text = new Konva.Text({
+      text: '🇺🇸🇺🇸',
+      fontSize: 30,
+      letterSpacing: 10,
+    });
+    // two flags are four UTF-16 code units but only two drawn glyphs
+    assert.equal(text.getTextWidth(), text.measureSize('🇺🇸🇺🇸').width + 2 * 10);
+  });
+
 });

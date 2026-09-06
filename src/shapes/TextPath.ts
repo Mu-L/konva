@@ -310,7 +310,7 @@ export class TextPath extends Shape<TextPathConfig> {
 
     // defines the width of the text on a straight line
     const textWidth = Math.max(
-      this.textWidth + ((this.attrs.text || '').length - 1) * letterSpacing,
+      this.textWidth + (charArr.length - 1) * letterSpacing,
       0
     );
 

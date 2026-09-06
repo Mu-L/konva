@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outDir": "lib",
     "target": "ES2018",
-    "lib": ["ES2019", "dom"],
+    "lib": ["ES2019", "ES2022.Intl", "dom"],
     "module": "nodenext",
     "noUncheckedSideEffectImports": true,
     "rewriteRelativeImportExtensions": true,

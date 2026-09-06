@@ -26,40 +26,23 @@ export interface CharRenderProps {
   context: Context;
 }
 
+// grapheme segmentation: one entry per user-perceived character, so flags,
+// ZWJ emoji sequences and combining marks stay together
+const segmenter =
+  typeof Intl !== 'undefined' && Intl.Segmenter
+    ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    : null;
 export function stringToArray(string: string): string[] {
-  // Use Unicode-aware splitting
-  return [...string].reduce((acc, char, index, array) => {
-    // Handle emoji with skin tone modifiers and ZWJ sequences
-    if (/\p{Emoji}/u.test(char)) {
-      // Check if next character is a modifier or ZWJ sequence
-      const nextChar = array[index + 1];
-      if (nextChar && /\p{Emoji_Modifier}|\u200D/u.test(nextChar)) {
-        // If we have a modifier, combine with current emoji
-        acc.push(char + nextChar);
-        // Skip the next character since we've used it
-        array[index + 1] = '';
-      } else {
-        // No modifier - treat as separate emoji
-        acc.push(char);
-      }
-    }
-    // Handle regional indicator symbols (flags)
-    else if (
-      /\p{Regional_Indicator}{2}/u.test(char + (array[index + 1] || ''))
-    ) {
-      acc.push(char + array[index + 1]);
-    }
-    // Handle Indic scripts and other combining characters
-    else if (index > 0 && /\p{Mn}|\p{Me}|\p{Mc}/u.test(char)) {
-      acc[acc.length - 1] += char;
-    }
-    // Handle other characters
-    else if (char) {
-      // Only push if not an empty string (skipped modifier)
-      acc.push(char);
-    }
-    return acc;
-  }, [] as string[]);
+  if (!segmenter) {
+    // no Intl.Segmenter (Firefox < 125): flags, then a code point with its
+    // combining marks, skin tone modifiers, variation selectors and ZWJ joins
+    return (
+      string.match(
+        /\p{RI}\p{RI}|\P{M}(?:\p{M}|\p{Emoji_Modifier}|\uFE0F|\u200D\P{M})*|\p{M}+/gu
+      ) || []
+    );
+  }
+  return Array.from(segmenter.segment(string), (s) => s.segment);
 }
 
 export interface TextConfig extends ShapeConfig {
@@ -595,12 +578,13 @@ export class Text extends Shape<TextConfig> {
       lastInParagraph: false,
     });
   }
-  _getTextWidth(text: string) {
+  _getTextWidth(text: string, graphemes?: number) {
     const letterSpacing = this.letterSpacing();
-    const length = text.length;
-    // letterSpacing * length is the total letter spacing for the text
-    // previously we used letterSpacing * (length - 1) but it doesn't match DOM behavior
-    return getDummyContext().measureText(text).width + letterSpacing * length;
+    // one spacing per grapheme, as the per-character rendering draws them
+    const spacing = letterSpacing
+      ? letterSpacing * (graphemes ?? stringToArray(text).length)
+      : 0;
+    return getDummyContext().measureText(text).width + spacing;
   }
   _setTextData() {
     let lines = this.text().split('\n'),
