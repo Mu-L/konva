@@ -103,9 +103,7 @@ const AUTO = 'auto',
     'wrap',
     'ellipsis',
     'letterSpacing',
-  ],
-  // cached variables
-  attrChangeListLen = ATTR_CHANGE_LIST.length;
+  ];
 
 // Safari on macOS renders text shadow even when globalAlpha is 0.
 // This feature check detects that bug so we can work around it with a buffer canvas.
@@ -161,7 +159,7 @@ function normalizeFontFamily(fontFamily: string) {
 }
 
 let dummyContext: CanvasRenderingContext2D;
-function getDummyContext() {
+export function getDummyContext() {
   if (dummyContext) {
     return dummyContext;
   }
@@ -244,10 +242,6 @@ export class Text extends Shape<TextConfig> {
   textHeight: number;
   constructor(config?: TextConfig) {
     super(checkDefaultFill(config));
-    // update text data for certain attr changes
-    for (let n = 0; n < attrChangeListLen; n++) {
-      this.on(ATTR_CHANGE_LIST[n] + CHANGE_KONVA, this._setTextData);
-    }
     this._setTextData();
   }
 
@@ -831,6 +825,14 @@ Text.prototype._attrsAffectingSize = [
   'letterSpacing',
 ];
 _registerNode(Text);
+
+// update text data for certain attr changes
+Text.prototype.on(
+  ATTR_CHANGE_LIST.map((attr) => attr + CHANGE_KONVA).join(' '),
+  function () {
+    this._setTextData();
+  }
+);
 
 /**
  * get/set width of text area, which includes padding.

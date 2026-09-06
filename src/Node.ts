@@ -895,6 +895,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * });
    */
   on(...args: any[]): this {
+    this._prepareListeners();
     const evtStr = args[0];
     const selectorOrHandler = args[1];
     const handler = args[2];
@@ -947,7 +948,18 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // remove listener by name
    * node.off('click.foo');
    */
+  // listeners added to a prototype go into its own map, not the parent's,
+  // and the lists flattened from the prototype chain so far are stale
+  _prepareListeners() {
+    if (this === this.constructor.prototype) {
+      if (!this.hasOwnProperty('eventListeners')) {
+        this.eventListeners = {};
+      }
+      Node.protoListenerMap = new WeakMap();
+    }
+  }
   off(evtStr?: string, callback?: Function) {
+    this._prepareListeners();
     let events = (evtStr || '').split(SPACE),
       len = events.length,
       n,
@@ -2550,12 +2562,18 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
   }
 
-  static protoListenerMap = new Map<string, any>();
+  // keyed by prototype: subclasses that share a nodeType (every shape class)
+  // have their own listeners
+  static protoListenerMap = new WeakMap<object, any>();
 
   _getProtoListeners(eventType) {
-    const { nodeType } = this;
-    const allListeners = Node.protoListenerMap.get(nodeType) || {};
-    let events = allListeners?.[eventType];
+    const proto = Object.getPrototypeOf(this);
+    let allListeners = Node.protoListenerMap.get(proto);
+    if (!allListeners) {
+      allListeners = {};
+      Node.protoListenerMap.set(proto, allListeners);
+    }
+    let events = allListeners[eventType];
     if (events === undefined) {
       //recalculate cache
       events = [];
@@ -2577,7 +2595,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       }
       // update cache
       allListeners[eventType] = events;
-      Node.protoListenerMap.set(nodeType, allListeners);
     }
 
     return events;
@@ -2589,8 +2606,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     const topListeners = this._getProtoListeners(eventType);
     if (topListeners) {
-      // Proto listeners are wired at module load and never mutated at
-      // runtime, so no defensive .slice() needed (hot path: every *Change).
+      // The list is rebuilt when a prototype gains a listener, so no
+      // defensive .slice() needed (hot path: every *Change).
       for (let i = 0; i < topListeners.length; i++) {
         topListeners[i].handler.call(this, evt);
       }
@@ -2970,7 +2987,6 @@ Node.prototype._attrsAffectingSize = [];
 
 // attache events listeners once into prototype
 // that way we don't spend too much time on making an new instance
-Node.prototype.eventListeners = {};
 Node.prototype.on(TRANSFORM_CHANGE_STR, function () {
   if (this._batchingTransformChange) {
     this._needClearTransformCache = true;

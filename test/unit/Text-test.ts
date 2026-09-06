@@ -2194,4 +2194,40 @@ describe('Text', function () {
     // at most one call per pass (scene and hit) for the font ascent
     assert.isAtMost(calls, 2);
   });
+
+  it('text relayout listeners live on the prototype, not on every instance', function () {
+    // prime the prototype listener cache of another shape class first
+    var rect = new Konva.Rect();
+    rect.width(10);
+
+    var text = new Konva.Text({
+      text: 'Hello world hello world hello world',
+      fontSize: 20,
+      width: 500,
+    });
+    assert.deepEqual(Object.keys(text.eventListeners), []);
+
+    var lines = text.textArr.length;
+    text.width(60);
+    assert.isAbove(text.textArr.length, lines);
+
+    var height = text.textHeight;
+    text.fontSize(40);
+    assert.isAbove(text.textHeight, height);
+  });
+
+  it('a subclass override of _setTextData is used for relayout', function () {
+    class MyText extends Konva.Text {
+      relayouts = 0;
+      _setTextData() {
+        this.relayouts++;
+        return super._setTextData();
+      }
+    }
+    var text = new MyText({ text: 'hello' });
+    // the field initializer runs after the layout done by the constructor
+    text.text('hello world');
+    text.fontSize(30);
+    assert.equal(text.relayouts, 2);
+  });
 });

@@ -4,7 +4,7 @@ import type { Context } from '../Context.ts';
 import type { ShapeConfig } from '../Shape.ts';
 import { Shape } from '../Shape.ts';
 import { Path } from './Path.ts';
-import { Text, stringToArray } from './Text.ts';
+import { Text, getDummyContext, stringToArray } from './Text.ts';
 import { getNumberValidator } from '../Validators.ts';
 import { _registerNode } from '../Global.ts';
 
@@ -81,7 +81,6 @@ function _strokeFunc(this: TextPath, context) {
  * });
  */
 export class TextPath extends Shape<TextPathConfig> {
-  dummyCanvas = Util.createCanvasElement();
   dataArray: PathSegment[] = [];
   glyphInfo: Array<{
     transposeX: number;
@@ -100,20 +99,7 @@ export class TextPath extends Shape<TextPathConfig> {
   constructor(config?: TextPathConfig) {
     // call super constructor
     super(config);
-
     this._readDataAttribute();
-
-    this.on('dataChange.konva', function () {
-      this._readDataAttribute();
-      this._setTextData();
-    });
-
-    // update text data for certain attr changes
-    this.on(
-      'textChange.konva alignChange.konva letterSpacingChange.konva kerningFuncChange.konva fontSizeChange.konva fontFamilyChange.konva directionChange.konva',
-      this._setTextData
-    );
-
     this._setTextData();
   }
 
@@ -253,8 +239,7 @@ export class TextPath extends Shape<TextPathConfig> {
   }
 
   _getTextSize(text: string) {
-    const dummyCanvas = this.dummyCanvas;
-    const _context = dummyCanvas.getContext('2d')!;
+    const _context = getDummyContext();
 
     _context.save();
 
@@ -438,11 +423,6 @@ export class TextPath extends Shape<TextPathConfig> {
       height: maxY - minY + fontSize,
     };
   }
-  destroy(): this {
-    Util.releaseCanvas(this.dummyCanvas);
-    return super.destroy();
-  }
-
   fontFamily: GetSet<string, this>;
   fontSize: GetSet<number, this>;
   fontStyle: GetSet<string, this>;
@@ -465,6 +445,18 @@ TextPath.prototype._strokeFuncHit = _strokeFunc;
 TextPath.prototype.className = 'TextPath';
 TextPath.prototype._attrsAffectingSize = ['text', 'fontSize', 'data'];
 _registerNode(TextPath);
+
+TextPath.prototype.on('dataChange.konva', function () {
+  this._readDataAttribute();
+  this._setTextData();
+});
+// update text data for certain attr changes
+TextPath.prototype.on(
+  'textChange.konva alignChange.konva letterSpacingChange.konva kerningFuncChange.konva fontSizeChange.konva fontFamilyChange.konva fontStyleChange.konva fontVariantChange.konva directionChange.konva',
+  function () {
+    this._setTextData();
+  }
+);
 
 /**
  * get/set SVG path data string.  This method

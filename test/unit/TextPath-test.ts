@@ -5,6 +5,7 @@ import {
   Konva,
   cloneAndCompareLayer,
   assertAlmostEqual,
+  countCalls,
 } from './test-utils.ts';
 
 describe('TextPath', function () {
@@ -1165,5 +1166,31 @@ describe('TextPath', function () {
     var rect = textpath.getClientRect();
 
     assert.equal(rect.height, 200, 'check height');
+  });
+
+  it('does not allocate a measurement canvas per instance', function () {
+    // the shared measurement context is created on first use
+    new Konva.TextPath({ text: 'abc', data: 'M0,0 L100,0' });
+    var canvases = countCalls(Konva.Util, 'createCanvasElement', () => {
+      new Konva.TextPath({ text: 'abc', data: 'M0,0 L100,0' });
+      new Konva.TextPath({ text: 'abc', data: 'M0,0 L100,0' });
+    });
+    assert.equal(canvases, 0);
+  });
+
+  it('relayouts on fontStyle and fontVariant changes and keeps its listeners on the prototype', function () {
+    var textpath = new Konva.TextPath({ text: 'abc', data: 'M0,0 L100,0' });
+    assert.deepEqual(Object.keys(textpath.eventListeners), []);
+
+    [
+      ['fontStyle', 'bold'],
+      ['fontVariant', 'small-caps'],
+      ['data', 'M0,0 L200,0'],
+    ].forEach(([attr, value]) => {
+      var glyphs = textpath.glyphInfo;
+      textpath.setAttr(attr, value);
+      assert.notStrictEqual(textpath.glyphInfo, glyphs, attr + ' relayouts');
+    });
+    assert.equal(textpath.pathLength, 200);
   });
 });

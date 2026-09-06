@@ -902,7 +902,6 @@ Shape.prototype._centroid = false;
 Shape.prototype.nodeType = 'Shape';
 _registerNode(Shape);
 
-Shape.prototype.eventListeners = {};
 Shape.prototype.on(
   'shadowColorChange.konva shadowBlurChange.konva shadowOffsetXChange.konva shadowOffsetYChange.konva shadowOpacityChange.konva shadowEnabledChange.konva',
   _clearHasShadowCache

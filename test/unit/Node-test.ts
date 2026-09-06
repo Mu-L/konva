@@ -3947,6 +3947,19 @@ describe('Node', function () {
     assert.equal(rect.getAttr('meta').keep, 1);
   });
 
+  it('a prototype listener added after an instance fired the event is picked up', function () {
+    class MyShape extends Konva.Shape {}
+    var shape = new MyShape();
+    shape.fire('customChange');
+
+    var calls = 0;
+    MyShape.prototype.on('customChange', () => calls++);
+    shape.fire('customChange');
+    assert.equal(calls, 1);
+    assert.isTrue(MyShape.prototype.hasOwnProperty('eventListeners'));
+    assert.isUndefined(Konva.Shape.prototype.eventListeners.customChange);
+  });
+
   it('toObject() keeps dates and class instances nested in a custom attribute', function () {
     var date = new Date(0);
     var rect = new Konva.Rect({
