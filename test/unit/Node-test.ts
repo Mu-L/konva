@@ -997,7 +997,6 @@ describe('Node', function () {
             skewY: -2,
             easing: 'ease-in-out'
 
-
         })
         */
   });
@@ -3907,4 +3906,56 @@ describe('Node', function () {
     rect.x(100);
     assert.equal(rect.getAbsolutePosition().x, 100);
   });
+
+  it('toObject() serializes frozen attributes', function () {
+    var rect = new Konva.Rect({
+      dash: Object.freeze([5, 5]),
+      meta: Object.freeze({ a: 1 }),
+    });
+    var obj = rect.toObject();
+    assert.deepEqual(obj.attrs.dash, [5, 5]);
+    assert.deepEqual(obj.attrs.meta, { a: 1 });
+    assert.doesNotThrow(() => rect.toJSON());
+  });
+
+  it('toObject() does not invoke node methods that share a name with a custom attribute', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ hide: true, destroy: 'later', move: 1 });
+    layer.add(rect);
+
+    var obj = rect.toObject();
+
+    assert.equal(rect.visible(), true, 'hide() was not called');
+    assert.equal(rect.getParent(), layer, 'destroy() was not called');
+    assert.equal(obj.attrs.hide, true);
+    assert.equal(obj.attrs.destroy, 'later');
+    assert.equal(obj.attrs.move, 1);
+  });
+
+  it('toObject() twice returns the same result and keeps the node attributes intact', function () {
+    var meta: any = { keep: 1 };
+    meta.self = meta;
+    var rect = new Konva.Rect({ meta });
+
+    var first = JSON.stringify(rect.toObject());
+    var second = JSON.stringify(rect.toObject());
+
+    assert.equal(first, second);
+    assert.strictEqual(rect.getAttr('meta').self, meta);
+    assert.equal(rect.getAttr('meta').keep, 1);
+  });
+
+  it('toObject() keeps dates and class instances nested in a custom attribute', function () {
+    var date = new Date(0);
+    var rect = new Konva.Rect({
+      meta: { createdAt: date, list: [date], plain: Object.create(null) },
+    });
+    var meta = rect.toObject().attrs.meta;
+    assert.strictEqual(meta.createdAt, date);
+    assert.strictEqual(meta.list[0], date);
+    assert.equal(JSON.parse(rect.toJSON()).attrs.meta.createdAt, date.toJSON());
+  });
+
 });

@@ -182,7 +182,7 @@ export const Factory = {
       setter = SET + capitalizedAttr,
       getter = GET + capitalizedAttr;
 
-    constructor.prototype[attr] = function () {
+    const accessor = function () {
       // setting
       if (arguments.length) {
         this[setter](arguments[0]);

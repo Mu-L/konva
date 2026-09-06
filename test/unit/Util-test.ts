@@ -495,4 +495,32 @@ describe('Util', function () {
   it('make sure Transform is exported', () => {
     assert.equal(!!Konva.Transform, true);
   });
+
+  it('_prepareToStringify does not mutate its input', function () {
+    var o: any = { a: 1 };
+    o.c = {
+      e: o,
+      f: global.document ? global.document.createElement('p') : { nodeType: 1 },
+    };
+    o.g = o;
+
+    assert.deepEqual(Konva.Util._prepareToStringify(o), { a: 1, c: {} });
+    assert.strictEqual(o.g, o, 'circular reference is kept');
+    assert.strictEqual(o.c.e, o, 'nested circular reference is kept');
+    assert.isDefined(o.c.f, 'element is kept');
+    assert.isFalse('visitedByCircularReferenceRemoval' in o);
+    assert.isFalse('visitedByCircularReferenceRemoval' in o.c);
+  });
+
+  it('_prepareToStringify accepts frozen objects and keeps arrays', function () {
+    var o = Object.freeze({
+      list: Object.freeze([1, { a: 2 }]),
+      nested: Object.freeze({ b: 3 }),
+    });
+    assert.deepEqual(Konva.Util._prepareToStringify(o), {
+      list: [1, { a: 2 }],
+      nested: { b: 3 },
+    });
+    assert.isTrue(Array.isArray(Konva.Util._prepareToStringify(o).list));
+  });
 });

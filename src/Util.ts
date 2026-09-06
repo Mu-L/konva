@@ -1078,41 +1078,24 @@ export const Util = {
     });
     return newStart;
   },
-  _prepareToStringify<T>(obj: any): T | null {
-    let desc;
-
-    obj.visitedByCircularReferenceRemoval = true;
-
-    for (const key in obj) {
-      if (!(
-        obj.hasOwnProperty(key) &&
-        obj[key] &&
-        typeof obj[key] == 'object'
-      )) {
+  // copies plain objects and arrays without DOM elements and circular
+  // references, so the input (the live attrs of a node) is never modified.
+  // Other objects (Date, class instances) are kept as they are
+  _prepareToStringify<T>(obj: any, ancestors = new Set<object>()): T {
+    const copy: any = Util._isArray(obj) ? [] : {};
+    ancestors.add(obj);
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (Util._isElement(val) || ancestors.has(val)) {
         continue;
       }
-      desc = Object.getOwnPropertyDescriptor(obj, key);
-      if (
-        obj[key].visitedByCircularReferenceRemoval ||
-        Util._isElement(obj[key])
-      ) {
-        if (desc.configurable) {
-          delete obj[key];
-        } else {
-          return null;
-        }
-      } else if (Util._prepareToStringify(obj[key]) === null) {
-        if (desc.configurable) {
-          delete obj[key];
-        } else {
-          return null;
-        }
-      }
+      copy[key] =
+        Util._isPlainObject(val) || Util._isArray(val)
+          ? Util._prepareToStringify(val, ancestors)
+          : val;
     }
-
-    delete obj.visitedByCircularReferenceRemoval;
-
-    return obj;
+    ancestors.delete(obj);
+    return copy;
   },
   // very simplified version of Object.assign
   _assign<T, U>(target: T, source: U) {
