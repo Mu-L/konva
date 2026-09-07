@@ -970,3 +970,21 @@ _registerNode(Path);
  * path.data('M200,100h100v50z');
  */
 Factory.addGetterSetter(Path, 'data');
+
+/**
+ * get width of the path. It is computed from the path data and cannot be set
+ * @name Konva.Path#width
+ * @method
+ * @returns {Number}
+ * @example
+ * var width = path.width();
+ */
+
+/**
+ * get height of the path. It is computed from the path data and cannot be set
+ * @name Konva.Path#height
+ * @method
+ * @returns {Number}
+ * @example
+ * var height = path.height();
+ */
