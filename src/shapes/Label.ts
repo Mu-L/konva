@@ -293,11 +293,10 @@ export class Tag extends Shape<TagConfig> {
     } else if (direction === DOWN) {
       height += pointerHeight;
     } else if (direction === LEFT) {
-      // ARGH!!! I have no idea why should I used magic 1.5!!!!!!!!!
-      x -= pointerWidth * 1.5;
+      x -= pointerWidth;
       width += pointerWidth;
     } else if (direction === RIGHT) {
-      width += pointerWidth * 1.5;
+      width += pointerWidth;
     }
     return {
       x: x,

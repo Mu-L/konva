@@ -371,4 +371,24 @@ describe('Label', function () {
     tag.pointerHeight(40);
     assert.equal(counter, 7);
   });
+
+  it('Tag.getSelfRect() grows by exactly the pointer on every side', function () {
+    var tag = new Konva.Tag({
+      width: 100,
+      height: 50,
+      pointerWidth: 20,
+      pointerHeight: 10,
+    });
+    var rects = {
+      none: { x: 0, y: 0, width: 100, height: 50 },
+      up: { x: 0, y: -10, width: 100, height: 60 },
+      down: { x: 0, y: 0, width: 100, height: 60 },
+      left: { x: -20, y: 0, width: 120, height: 50 },
+      right: { x: 0, y: 0, width: 120, height: 50 },
+    };
+    Object.keys(rects).forEach((direction: any) => {
+      tag.pointerDirection(direction);
+      assert.deepEqual(tag.getSelfRect(), rects[direction], direction);
+    });
+  });
 });
