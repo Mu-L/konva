@@ -5893,6 +5893,41 @@ describe('Transformer', function () {
     assert.isTrue(isFinite(tr.getClientRect().width));
   });
 
+  it('follows a node change made between two pointer moves', async function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ x: 0, y: 0, width: 160, height: 100 });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+    layer.draw();
+
+    // React users apply the transform through state: the scale is reset right
+    // away, the new width lands on the next tick
+    rect.on('transform', () => {
+      var width = rect.width() * rect.scaleX();
+      rect.scaleX(1);
+      queueMicrotask(() => rect.width(width));
+    });
+
+    simulateMouseDown(tr, { x: 160, y: 50 });
+    simulateMouseMove(tr, { x: 200, y: 50 });
+    await Promise.resolve();
+    assert.equal(rect.width(), 200);
+    assert.equal(tr.width(), 200, 'outline follows the deferred width');
+    var anchor = tr.findOne<Rect>('.middle-right')!;
+    assert.equal(anchor.getAbsolutePosition().x, 200, 'anchor moved');
+
+    // the next move resizes from the new width, not from the stale one
+    simulateMouseMove(tr, { x: 240, y: 50 });
+    await Promise.resolve();
+    assertAlmostEqual(rect.width(), 240);
+    simulateMouseUp(tr, { x: 240, y: 50 });
+    assert.equal(tr.width(), 240);
+    assert.equal(anchor.getAbsolutePosition().x, 240);
+  });
+
   it('transform follows the finger that grabbed the anchor', function () {
     var stage = addStage();
     var layer = new Konva.Layer();

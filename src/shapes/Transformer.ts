@@ -260,6 +260,8 @@ export class Transformer extends Group {
   _anchors: Record<string, Rect> = {};
   _back: Shape;
   _transforming = false;
+  // true while _fitNodesInto writes the new attrs into the nodes
+  _fitting = false;
   // the window the transform events are listened to. The stage may be
   // rendered in another window than the one Konva was imported into
   _transformWindow: Window | null = null;
@@ -355,10 +357,11 @@ export class Transformer extends Group {
     }
     this._nodes.forEach((node) => {
       const onChange = () => {
-        // Perf: skip during anchor drag — _fitNodesInto does the final
-        // _resetTransformCache + update itself, so per-attr fan-out here is
-        // pure waste (was O(N*events) per resize step).
-        if (this._transforming) return;
+        // Perf: skip the changes _fitNodesInto makes itself — it does the
+        // final _resetTransformCache + update, so per-attr fan-out here is
+        // pure waste (was O(N*events) per resize step). A change made between
+        // two pointer moves (e.g. a deferred state update) must get through.
+        if (this._fitting) return;
         if (this.nodes().length === 1 && this.useSingleNodeRotation()) {
           this.rotation(this.nodes()[0].getAbsoluteRotation());
         }
@@ -1053,10 +1056,12 @@ export class Transformer extends Group {
     // batchDraw per affected layer is issued at the end.
     const prevAutoDraw = Konva.autoDrawEnabled;
     Konva.autoDrawEnabled = false;
+    this._fitting = true;
     try {
       return this._doFitNodesInto(newAttrs, evt, anchorProjected);
     } finally {
       Konva.autoDrawEnabled = prevAutoDraw;
+      this._fitting = false;
     }
   }
 
@@ -1267,7 +1272,7 @@ export class Transformer extends Group {
     this._updateScheduled = true;
     Node._runAfterAbsTransformCascade(() => {
       this._updateScheduled = false;
-      if (!this._nodes?.length || this._transforming || this.isDragging()) {
+      if (!this._nodes?.length || this._fitting || this.isDragging()) {
         return;
       }
       this.update();
