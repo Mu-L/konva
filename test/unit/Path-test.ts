@@ -9,7 +9,6 @@ import {
   createCanvasAndContext,
   compareLayerAndCanvas,
   cloneAndCompareLayer,
-  isNode,
   assertAlmostEqual,
   assertAlmostDeepEqual,
   isBrowser,
@@ -1597,10 +1596,6 @@ describe('Path', function () {
   });
 
   it('getClientRect of complex path', function () {
-    // TODO: it is failing on Node
-    if (isNode) {
-      return;
-    }
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);

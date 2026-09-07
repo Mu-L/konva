@@ -152,8 +152,6 @@ const listenToWindow = (win: Window | null) => {
   DD._listenToWindow(win);
   // chrome is clearing canvas in inactive browser window, causing layer content to be erased
   // so let's redraw layers as soon as window becomes active
-  // TODO: any other way to solve this issue?
-  // TODO: should we remove it if chrome fixes the issue?
   win.document.addEventListener('visibilitychange', () => {
     stages.forEach((stage) => {
       stage.batchDraw();
@@ -620,7 +618,6 @@ export class Stage extends Container<Layer, StageConfig> {
       });
       triggeredOnShape = true;
 
-      // TODO: test in iframe
       // only call preventDefault if the shape is listening for events
       const isTouch = evt.type.indexOf('touch') >= 0;
       if (shape.preventDefault() && evt.cancelable && isTouch) {
@@ -826,7 +823,6 @@ export class Stage extends Container<Layer, StageConfig> {
 
     // always call preventDefault for desktop events because some browsers
     // try to drag and drop the canvas element
-    // TODO: are we sure we need to prevent default at all?
     // do not call this function on mobile because it prevent "click" event on all parent containers
     // but apps may listen to it.
     if (evt.cancelable && eventType !== 'touch' && eventType !== 'pointer') {

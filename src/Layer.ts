@@ -7,7 +7,7 @@ import { SceneCanvas, HitCanvas } from './Canvas.ts';
 import type { Stage } from './Stage.ts';
 import { getBooleanValidator } from './Validators.ts';
 
-import type { GetSet, Vector2d } from './types.ts';
+import type { GetSet, IRect, Vector2d } from './types.ts';
 import type { Group } from './Group.ts';
 import type { Shape } from './Shape.ts';
 import { shapes } from './Shape.ts';
@@ -107,8 +107,18 @@ export class Layer extends Container<Group | Shape> {
   getContext() {
     return this.getCanvas().getContext();
   }
-  // TODO: deprecate this method
-  clear(bounds?) {
+  /**
+   * clear the scene and hit canvas of the layer. The nodes stay and are
+   * drawn again by the next `draw()`
+   * @method
+   * @name Konva.Layer#clear
+   * @param {Object} [bounds] clear only this rectangle: `{ x, y, width, height }`
+   * @returns {Konva.Layer}
+   * @example
+   * layer.clear();
+   * layer.clear({ x: 0, y: 0, width: 100, height: 100 });
+   */
+  clear(bounds?: IRect) {
     this.getContext().clear(bounds);
     this.getHitCanvas().getContext().clear(bounds);
     return this;

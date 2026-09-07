@@ -1353,7 +1353,7 @@ describe('Shape', function () {
     );
   });
 
-  // TODO: restore it!
+  // a negative scale should flip the shadow offset as well, see #1942
   it.skip('scale should also effect shadow offset - negative scale', function () {
     var stage = addStage();
 

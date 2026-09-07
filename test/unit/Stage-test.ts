@@ -623,8 +623,7 @@ describe('Stage', function () {
   });
 
   // ======================================================
-  // TODO: restore it, remove should deatach from DOM
-  it.skip('remove stage', function () {
+  it('remove() of a stage is a no-op, a stage has no parent node', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -639,10 +638,12 @@ describe('Stage', function () {
     layer.add(circle);
     stage.add(layer);
 
-    // remove should have no effect, and should cause no JS error
     stage.remove();
 
-    assert.equal(stage.content.parentNode, undefined);
+    if (Konva.isBrowser) {
+      assert.equal(stage.content.parentNode, stage.container());
+    }
+    assert.equal(stage.getLayers().length, 1);
   });
 
   // ======================================================

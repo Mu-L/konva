@@ -1474,8 +1474,13 @@ describe('Caching', function () {
       20 * circle._getCanvasCache().filter.pixelRatio
     );
     circle.filters([]);
-    // TODO: should we clear cache canvas?
-    // assert.equal(circle._getCanvasCache().filter.width, 0);
+    layer.draw();
+    // the filter canvas is kept, so toggling the filters back on does not
+    // reallocate it. clearCache() releases it with the rest of the cache
+    assert.equal(
+      circle._getCanvasCache().filter.width,
+      20 * circle._getCanvasCache().filter.pixelRatio
+    );
   });
 
   it('hit from cache + global composite', function (done) {

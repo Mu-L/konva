@@ -4,7 +4,12 @@ import type { Context } from '../Context.ts';
 import type { ShapeConfig } from '../Shape.ts';
 import { Shape } from '../Shape.ts';
 import { Path } from './Path.ts';
-import { Text, getDummyContext, stringToArray } from './Text.ts';
+import {
+  Text,
+  getDecorationLineWidth,
+  getDummyContext,
+  stringToArray,
+} from './Text.ts';
 import { getNumberValidator } from '../Validators.ts';
 import { _registerNode } from '../Global.ts';
 
@@ -172,7 +177,7 @@ export class TextPath extends Shape<TextPathConfig> {
     }
     if (hasUnderline) {
       context.strokeStyle = fill;
-      context.lineWidth = fontSize / 20;
+      context.lineWidth = getDecorationLineWidth(fontSize);
       context.stroke();
     }
 
@@ -194,7 +199,7 @@ export class TextPath extends Shape<TextPathConfig> {
         context.restore();
       }
       context.strokeStyle = fill;
-      context.lineWidth = fontSize / 20;
+      context.lineWidth = getDecorationLineWidth(fontSize);
       context.stroke();
     }
 

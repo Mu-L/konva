@@ -4885,32 +4885,6 @@ describe('Transformer', function () {
     assert.equal(callCount, 1);
   });
 
-  // TODO: move to manual tests
-  it.skip('performance check - drag several nodes', function () {
-    var stage = addStage();
-    var layer = new Konva.Layer();
-    stage.add(layer);
-
-    for (var i = 0; i < 500; i++) {
-      var shape = new Konva.Circle({
-        x: 100,
-        y: 100,
-        radius: 50,
-        fill: 'red',
-        draggable: true,
-      });
-      layer.add(shape);
-    }
-    var shapes = layer.find('Circle');
-    var tr = new Konva.Transformer({
-      nodes: shapes,
-    });
-    layer.add(tr);
-    layer.draw();
-
-    throw 1;
-  });
-
   // we don't support height = 0
   it.skip('try to transform zero size shape', function () {
     var stage = addStage();

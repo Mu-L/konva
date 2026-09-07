@@ -32,6 +32,12 @@ const segmenter =
   typeof Intl !== 'undefined' && Intl.Segmenter
     ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
     : null;
+// canvas has no API for the underline thickness of a font. This is close to
+// what browsers draw for the common fonts
+export function getDecorationLineWidth(fontSize: number) {
+  return fontSize / 15;
+}
+
 export function stringToArray(string: string): string[] {
   if (!segmenter) {
     // no Intl.Segmenter (Firefox < 125): flags, then a code point with its
@@ -352,9 +358,7 @@ export class Text extends Shape<TextConfig> {
           align === JUSTIFY && !lastLine ? totalWidth - padding * 2 : width;
         context.lineTo(x + Math.round(lineWidth), y);
 
-        // I have no idea what is real ratio
-        // just /15 looks good enough
-        context.lineWidth = fontSize / 15;
+        context.lineWidth = getDecorationLineWidth(fontSize);
 
         const gradient = this._getLinearGradient();
         context.strokeStyle = gradient || fill;
@@ -452,7 +456,7 @@ export class Text extends Shape<TextConfig> {
           x + Math.round(lineWidth),
           translateY + lineTranslateY + yOffset
         );
-        context.lineWidth = fontSize / 15;
+        context.lineWidth = getDecorationLineWidth(fontSize);
         const gradient = this._getLinearGradient();
         context.strokeStyle = gradient || fill;
         context.stroke();

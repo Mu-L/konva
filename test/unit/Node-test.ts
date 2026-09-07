@@ -2165,8 +2165,7 @@ describe('Node', function () {
     assert.equal(clicks.length, 1);
   });
 
-  // TODO: should we remove deligation?
-  it.skip('simple event delegation', function () {
+  it('simple event delegation', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     var circle = new Konva.Circle({
@@ -2184,16 +2183,16 @@ describe('Node', function () {
     layer.draw();
 
     var fired = false;
-    // layer.on('click', 'Circle', function (e) {
-    //   assert.equal(this, circle);
-    //   assert.equal(e.currentTarget, circle);
-    //   fired = true;
-    // });
+    layer.on('click', 'Circle', function (e) {
+      assert.equal(this, circle);
+      assert.equal(e.currentTarget, circle);
+      fired = true;
+    });
     circle.fire('click', undefined, true);
     assert.equal(fired, true);
   });
 
-  it.skip('complex event delegation', function () {
+  it('complex event delegation', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
@@ -2215,11 +2214,11 @@ describe('Node', function () {
     layer.draw();
 
     var fired = false;
-    // layer.on('click', '.group1', function (e) {
-    //   assert.equal(this, group);
-    //   assert.equal(e.currentTarget, group);
-    //   fired = true;
-    // });
+    layer.on('click', '.group1', function (e) {
+      assert.equal(this, group);
+      assert.equal(e.currentTarget, group);
+      fired = true;
+    });
     circle.fire('click', undefined, true);
     assert.equal(fired, true);
   });

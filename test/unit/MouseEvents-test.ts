@@ -1955,12 +1955,6 @@ describe('MouseEvents', function () {
   });
 
   it('double click after drag should trigger event', function (done) {
-    // skip this test for NodeJS because it fails sometimes
-    // TODO: WHY?!?!?!
-    if (!Konva.isBrowser) {
-      return done();
-    }
-
     var stage = addStage();
     var layer = new Konva.Layer();
     stage.add(layer);
