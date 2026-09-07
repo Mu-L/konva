@@ -652,4 +652,17 @@ describe('Layer', function () {
     assert.equal(layer.getIntersection({ x: 110, y: 100 }), circle);
     assert.equal(layer.getIntersection({ x: 170, y: 100 }), null);
   });
+
+  it('size() of a layer warns and does not resize its canvas, like width() and height()', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var canvasWidth = layer.getCanvas().width;
+    var warns = countCalls(Konva.Util, 'warn', () => {
+      layer.size({ width: 10, height: 10 });
+    });
+    assert.equal(warns, 2);
+    assert.equal(layer.getCanvas().width, canvasWidth);
+    assert.equal(layer.width(), stage.width());
+  });
 });

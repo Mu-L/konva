@@ -2778,4 +2778,19 @@ describe('Container', function () {
     assert.deepEqual(group.getClientRect(), expected);
     assert.deepEqual(layer.getClientRect(), expected);
   });
+
+  it('getChildren() returns a copy, so destroying while iterating reaches every child', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    for (var i = 0; i < 4; i++) {
+      layer.add(new Konva.Rect({ width: 10, height: 10 }));
+    }
+    layer.getChildren().forEach((node) => node.destroy());
+    assert.equal(layer.getChildren().length, 0);
+
+    layer.add(new Konva.Rect());
+    layer.getChildren().push(new Konva.Circle());
+    assert.equal(layer.children.length, 1);
+  });
 });

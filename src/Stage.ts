@@ -439,7 +439,7 @@ export class Stage extends Container<Layer, StageConfig> {
 
     // set layer dimensions
     this.children.forEach((layer) => {
-      layer.setSize({ width, height });
+      layer._setSize({ width, height });
       layer.draw();
     });
   }
@@ -467,7 +467,7 @@ export class Stage extends Container<Layer, StageConfig> {
           ' layers. Recommended maximum number of layers is 3-5. Adding more layers into the stage may drop the performance. Rethink your tree structure, you can use Konva.Group.'
       );
     }
-    layer.setSize({ width: this.width(), height: this.height() });
+    layer._setSize({ width: this.width(), height: this.height() });
 
     // draw layer and append canvas to container
     layer.draw();
@@ -1019,7 +1019,9 @@ export class Stage extends Container<Layer, StageConfig> {
    * @return {Konva.Stage} this
    */
   batchDraw() {
-    this.getChildren().forEach(function (layer) {
+    // the config applied by the Node constructor already requests a draw,
+    // before the children array exists
+    this.children?.forEach(function (layer) {
       layer.batchDraw();
     });
     return this;

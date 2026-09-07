@@ -222,7 +222,9 @@ export class Layer extends Container<Group | Shape> {
   getStage() {
     return this.parent as Stage;
   }
-  setSize({ width, height }) {
+  // the canvases follow the stage size. The public size() of a layer, like
+  // width() and height(), warns and does nothing
+  _setSize({ width, height }) {
     this.canvas.setSize(width, height);
     this._syncHitCanvasSize();
     this._setSmoothEnabled();

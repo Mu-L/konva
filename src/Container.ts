@@ -53,11 +53,9 @@ export abstract class Container<
    * });
    */
   getChildren(filterFunc?: (item: Node) => boolean) {
+    // a copy, so that removing children while iterating over it is safe
     const children = this.children || [];
-    if (filterFunc) {
-      return children.filter(filterFunc);
-    }
-    return children;
+    return filterFunc ? children.filter(filterFunc) : children.slice();
   }
   /**
    * determine if node has children
@@ -66,7 +64,7 @@ export abstract class Container<
    * @returns {Boolean}
    */
   hasChildren() {
-    return this.getChildren().length > 0;
+    return this.children.length > 0;
   }
   /**
    * remove all children. Children will be still in memory.
@@ -75,7 +73,7 @@ export abstract class Container<
    * @name Konva.Container#removeChildren
    */
   removeChildren() {
-    this.getChildren().forEach((child) => {
+    this.children.forEach((child) => {
       // reset parent to prevent many _setChildrenIndices calls
       child.parent = null;
       child.index = 0;
@@ -92,7 +90,7 @@ export abstract class Container<
    * @name Konva.Container#destroyChildren
    */
   destroyChildren() {
-    this.getChildren().forEach((child) => {
+    this.children.forEach((child) => {
       // reset parent to prevent many _setChildrenIndices calls
       child.parent = null;
       child.index = 0;
@@ -132,10 +130,10 @@ export abstract class Container<
       return this;
     }
     this._validateAdd(child);
-    child.index = this.getChildren().length;
+    child.index = this.children.length;
     child.parent = this;
     child._clearCaches();
-    this.getChildren().push(child);
+    this.children.push(child);
     this._fire('add', {
       child: child,
     });
@@ -240,8 +238,7 @@ export abstract class Container<
   }
   private _descendants(fn: (n: Node) => boolean) {
     let shouldStop = false;
-    const children = this.getChildren();
-    for (const child of children) {
+    for (const child of this.children) {
       shouldStop = fn(child);
       if (shouldStop) {
         return true;
@@ -262,7 +259,7 @@ export abstract class Container<
 
     obj.children = [];
 
-    this.getChildren().forEach((child) => {
+    this.children.forEach((child) => {
       obj.children!.push(child.toObject());
     });
 
@@ -290,7 +287,7 @@ export abstract class Container<
     // call super method
     const node = Node.prototype.clone.call(this, obj);
 
-    this.getChildren().forEach(function (no) {
+    this.children.forEach(function (no) {
       node.add(no.clone());
     });
     return node as this;

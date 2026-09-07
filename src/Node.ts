@@ -1266,7 +1266,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         index++;
 
         if (child.nodeType !== SHAPE) {
-          nodes = nodes.concat(child.getChildren().slice());
+          nodes = nodes.concat(child.children);
         }
 
         if (child._id === that._id) {
@@ -1280,7 +1280,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     }
     const stage = this.getStage();
     if (that.nodeType !== UPPER_STAGE && stage) {
-      addChildren(stage.getChildren());
+      addChildren(stage.children);
     }
 
     return index;
@@ -1507,7 +1507,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return false;
     }
     const index = this.index,
-      len = this.parent.getChildren().length;
+      len = this.parent.children.length;
     if (index < len - 1) {
       this.parent.children.splice(index, 1);
       this.parent.children.push(this);
@@ -1528,7 +1528,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return false;
     }
     const index = this.index,
-      len = this.parent.getChildren().length;
+      len = this.parent.children.length;
     if (index < len - 1) {
       this.parent.children.splice(index, 1);
       this.parent.children.splice(index + 1, 0, this);
