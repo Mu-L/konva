@@ -1516,7 +1516,7 @@ export class Transformer extends Group {
   ignoreStroke: GetSet<boolean, this>;
   boundBoxFunc: GetSet<(oldBox: Box, newBox: Box) => Box, this>;
   anchorDragBoundFunc: GetSet<
-    (oldPos: Vector2d, newPos: Vector2d, e: MouseEvent) => Vector2d,
+    (oldPos: Vector2d, newPos: Vector2d, evt: any) => Vector2d,
     this
   >;
   anchorStyleFunc: GetSet<null | ((Node: Rect) => void), this>;

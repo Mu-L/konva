@@ -8,8 +8,9 @@ import type { Context } from '../Context.ts';
 import type { GetSet, Vector2d } from '../types.ts';
 
 export interface EllipseConfig extends ShapeConfig {
-  radiusX: number;
-  radiusY: number;
+  radius?: Vector2d;
+  radiusX?: number;
+  radiusY?: number;
 }
 
 /**

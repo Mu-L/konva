@@ -99,18 +99,20 @@ function getBezierExtremaPoints(points) {
   return extrema;
 }
 
+export type LinePoints =
+  | number[]
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array;
+
 export interface LineConfig extends ShapeConfig {
-  points?:
-    | number[]
-    | Int8Array
-    | Uint8Array
-    | Uint8ClampedArray
-    | Int16Array
-    | Uint16Array
-    | Int32Array
-    | Uint32Array
-    | Float32Array
-    | Float64Array;
+  points?: LinePoints;
   tension?: number;
   closed?: boolean;
   bezier?: boolean;
@@ -377,7 +379,7 @@ export class Line<
   closed: GetSet<boolean, this>;
   bezier: GetSet<boolean, this>;
   tension: GetSet<number, this>;
-  points: GetSet<number[], this>;
+  points: GetSet<LinePoints, this>;
 }
 
 Line.prototype.className = 'Line';

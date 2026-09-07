@@ -92,6 +92,12 @@ export const Konva = Core.Util._assign(Core, {
 
 export namespace Konva {
   export type Vector2d = Core.Vector2d;
+  export type IRect = Core.IRect;
+  export type GetSet<Type, This> = Core.GetSet<Type, This>;
+  export type Filter = Core.Filter;
+  export type LineCap = Core.LineCap;
+  export type LineJoin = Core.LineJoin;
+  export type Box = import('./shapes/Transformer.ts').Box;
   export type Node = Core.Node;
   export type NodeConfig = Core.NodeConfig;
   export type KonvaEventObject<EventType> = Core.KonvaEventObject<EventType>;

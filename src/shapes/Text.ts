@@ -51,6 +51,13 @@ export function stringToArray(string: string): string[] {
   return Array.from(segmenter.segment(string), (s) => s.segment);
 }
 
+// the setter comes first, as in GetSet, so that the overloads line up
+// with the ones of the base class
+export interface AutoSizeGetSet<This> {
+  (size: number | 'auto' | null | undefined): This;
+  (): number;
+}
+
 export interface TextConfig extends ShapeConfig {
   direction?: string;
   text?: string;
@@ -67,6 +74,7 @@ export interface TextConfig extends ShapeConfig {
   letterSpacing?: number;
   wrap?: string;
   ellipsis?: boolean;
+  charRenderFunc?: null | ((props: CharRenderProps) => void);
 }
 
 // constants
@@ -820,6 +828,9 @@ export class Text extends Shape<TextConfig> {
   wrap: GetSet<string, this>;
   ellipsis: GetSet<boolean, this>;
   charRenderFunc: GetSet<null | ((props: CharRenderProps) => void), this>;
+  // 'auto' resets the fixed size; the getters return the measured size
+  width: AutoSizeGetSet<this>;
+  height: AutoSizeGetSet<this>;
 }
 
 Text.prototype._fillFunc = _fillFunc;

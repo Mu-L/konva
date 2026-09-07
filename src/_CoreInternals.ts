@@ -44,6 +44,11 @@ export const Konva = Util._assign(Global, {
 
 export namespace Konva {
   export type Vector2d = import('./types.ts').Vector2d;
+  export type IRect = import('./types.ts').IRect;
+  export type GetSet<Type, This> = import('./types.ts').GetSet<Type, This>;
+  export type Filter = import('./Node.ts').Filter;
+  export type LineCap = import('./Shape.ts').LineCap;
+  export type LineJoin = import('./Shape.ts').LineJoin;
   export type Node = import('./Node.ts').Node;
   export type NodeConfig = import('./Node.ts').NodeConfig;
   export type KonvaEventObject<EventType> =

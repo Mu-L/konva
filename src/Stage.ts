@@ -15,6 +15,11 @@ export interface StageConfig extends ContainerConfig {
   container?: HTMLDivElement | string;
 }
 
+export interface ContainerGetSet<This> {
+  (container: HTMLDivElement | string): This;
+  (): HTMLDivElement;
+}
+
 // CONSTANTS
 const STAGE = 'Stage',
   STRING = 'string',
@@ -1027,7 +1032,8 @@ export class Stage extends Container<Layer, StageConfig> {
     return this;
   }
 
-  container: GetSet<HTMLDivElement, this>;
+  // the setter takes an element or its id, the getter returns the element
+  container: ContainerGetSet<this>;
 }
 
 Stage.prototype.nodeType = STAGE;

@@ -28,7 +28,6 @@ export interface TextPathConfig extends ShapeConfig {
   textDecoration?: string;
   direction?: string;
   kerningFunc?: (leftChar: string, rightChar: string) => number;
-  lineHeight?: number;
 }
 
 const EMPTY_STRING = '',

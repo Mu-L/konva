@@ -1,7 +1,7 @@
 import { Konva } from './Global.ts';
 import { Transform, Util } from './Util.ts';
 import { Factory } from './Factory.ts';
-import type { NodeConfig } from './Node.ts';
+import type { GetClientRectConfig, NodeConfig } from './Node.ts';
 import { Node } from './Node.ts';
 import {
   getNumberValidator,
@@ -46,6 +46,13 @@ export type ShapeConfig = NodeConfig & {
   fillLinearGradientEndPointX?: number;
   fillLinearGradientEndPointY?: number;
   fillLinearGradientColorStops?: Array<number | string>;
+  strokeLinearGradientStartPoint?: Vector2d;
+  strokeLinearGradientStartPointX?: number;
+  strokeLinearGradientStartPointY?: number;
+  strokeLinearGradientEndPoint?: Vector2d;
+  strokeLinearGradientEndPointX?: number;
+  strokeLinearGradientEndPointY?: number;
+  strokeLinearGradientColorStops?: Array<number | string>;
   fillRadialGradientStartPoint?: Vector2d;
   fillRadialGradientStartPointX?: number;
   fillRadialGradientStartPointY?: number;
@@ -84,12 +91,7 @@ export type ShapeConfig = NodeConfig & {
   perfectDrawEnabled?: boolean;
 };
 
-export interface ShapeGetClientRectConfig {
-  skipTransform?: boolean;
-  skipShadow?: boolean;
-  skipStroke?: boolean;
-  relativeTo?: Node;
-}
+export type ShapeGetClientRectConfig = GetClientRectConfig;
 
 export type FillFuncOutput =
   | void

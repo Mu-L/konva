@@ -222,6 +222,16 @@ export interface KonvaEventObject<EventType, This = Node> {
   currentTarget: This;
   cancelBubble: boolean;
   child?: Node;
+  // the previous and the new value of an attribute change event
+  oldVal?: any;
+  newVal?: any;
+}
+
+export interface GetClientRectConfig {
+  skipTransform?: boolean;
+  skipShadow?: boolean;
+  skipStroke?: boolean;
+  relativeTo?: Container;
 }
 
 export type KonvaEventListener<This, EventType> = (
@@ -645,12 +655,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * rect.getClientRect();
    * // returns Object {x: -2, y: 46, width: 104, height: 208}
    */
-  getClientRect(config?: {
-    skipTransform?: boolean;
-    skipShadow?: boolean;
-    skipStroke?: boolean;
-    relativeTo?: Container;
-  }): { x: number; y: number; width: number; height: number } {
+  getClientRect(config?: GetClientRectConfig): IRect {
     // abstract method
     // redefine in Container and Shape
     throw new Error('abstract "getClientRect" method call');

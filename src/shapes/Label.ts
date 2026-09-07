@@ -312,7 +312,7 @@ export class Tag extends Shape<TagConfig> {
   >;
   pointerWidth: GetSet<number, this>;
   pointerHeight: GetSet<number, this>;
-  cornerRadius: GetSet<number, this>;
+  cornerRadius: GetSet<number | number[], this>;
 }
 
 Tag.prototype.className = 'Tag';

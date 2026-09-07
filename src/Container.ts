@@ -1,7 +1,7 @@
 import type { HitCanvas, SceneCanvas } from './Canvas.ts';
 import type { SceneContext } from './Context.ts';
 import { Factory } from './Factory.ts';
-import type { NodeConfig } from './Node.ts';
+import type { GetClientRectConfig, NodeConfig } from './Node.ts';
 import { Node } from './Node.ts';
 import type { Shape } from './Shape.ts';
 import type { GetSet, IRect } from './types.ts';
@@ -14,7 +14,7 @@ export type ClipFuncOutput =
 
 export interface ContainerConfig extends NodeConfig {
   clearBeforeDraw?: boolean;
-  clipFunc?: (ctx: SceneContext) => ClipFuncOutput;
+  clipFunc?: (ctx: SceneContext, container: Container) => ClipFuncOutput;
   clipX?: number;
   clipY?: number;
   clipWidth?: number;
@@ -443,14 +443,7 @@ export abstract class Container<
     }
   }
 
-  getClientRect(
-    config: {
-      skipTransform?: boolean;
-      skipShadow?: boolean;
-      skipStroke?: boolean;
-      relativeTo?: Container<Node>;
-    } = {}
-  ): IRect {
+  getClientRect(config: GetClientRectConfig = {}): IRect {
     const skipTransform = config.skipTransform;
     const relativeTo = config.relativeTo;
 
@@ -527,7 +520,7 @@ export abstract class Container<
   // there was "this" instead of "Container<ChildType>",
   // but it breaks react-konva types: https://github.com/konvajs/react-konva/issues/390
   clipFunc: GetSet<
-    (ctx: CanvasRenderingContext2D, shape: Container) => ClipFuncOutput,
+    (ctx: SceneContext, container: Container) => ClipFuncOutput,
     this
   >;
 }

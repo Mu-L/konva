@@ -921,7 +921,7 @@ export const Util = {
   // the bounds of a flat [x0, y0, x1, y1, ...] array. A NaN coordinate is
   // skipped so one bad point cannot turn the whole box into NaN; no usable
   // point at all is an empty rect
-  _getPointsRect(points: number[]): IRect {
+  _getPointsRect(points: ArrayLike<number>): IRect {
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
