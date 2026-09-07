@@ -6010,4 +6010,58 @@ describe('Transformer', function () {
     assert.equal(tr.getClientRect().width, 0);
     assert.doesNotThrow(() => layer.draw());
   });
+
+  it('getClientRect() honours its config', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer({ x: 100 });
+    stage.add(layer);
+    var rect = new Konva.Rect({ x: 50, y: 50, width: 100, height: 100 });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+    layer.draw();
+
+    var absolute = tr.getClientRect();
+    var relative = tr.getClientRect({ relativeTo: layer });
+    assert.equal(relative.x, absolute.x - 100);
+    assert.equal(relative.width, absolute.width);
+    // the layer rect is built from the rects of its children relative to it
+    assert.equal(layer.getClientRect().x, absolute.x);
+    // the anchors follow the transformer, not the layer
+    var anchor = tr._anchors['top-left'];
+    assert.deepEqual(anchor.getAbsoluteTransform(layer).getTranslation(), {
+      x: 45,
+      y: 45,
+    });
+  });
+
+  it('a transform suppresses the hit graph only on the layers it touches', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var other = new Konva.Layer();
+    stage.add(layer, other);
+    var rect = new Konva.Rect({
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 100,
+      fill: 'yellow',
+    });
+    layer.add(rect);
+    var tr = new Konva.Transformer({ nodes: [rect] });
+    layer.add(tr);
+    var circle = new Konva.Circle({ x: 400, y: 100, radius: 50, fill: 'red' });
+    other.add(circle);
+    stage.draw();
+
+    // grab the bottom-right anchor
+    sd(stage, { x: 150, y: 150 });
+    assert.equal(tr.isTransforming(), true);
+    other.draw();
+    assert.equal(other.getIntersection({ x: 400, y: 100 }), circle);
+    sm(stage, { x: 160, y: 160 });
+    simulateMouseUp(tr, { x: 160, y: 160 });
+    assert.equal(tr.isTransforming(), false);
+    assert.equal(other.getIntersection({ x: 400, y: 100 }), circle);
+  });
 });

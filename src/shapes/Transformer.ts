@@ -207,7 +207,7 @@ function getSnap(snaps: Array<number>, newRotationRad: number, tol: number) {
   return snapped;
 }
 
-let activeTransformersCount = 0;
+const activeTransformers = new Set<Transformer>();
 /**
  * Transformer constructor.  Transformer is a special type of group that allow you transform Konva
  * primitives and shapes. Transforming tool is not changing `width` and `height` properties of nodes
@@ -268,8 +268,21 @@ export class Transformer extends Group {
   _updateScheduled = false;
 
   static isTransforming = () => {
-    return activeTransformersCount > 0;
+    return activeTransformers.size > 0;
   };
+  // the hit graph of a layer is not drawn while a transformer on it, or of
+  // a node on it, is transforming (see Layer.shouldDrawHit)
+  static _isLayerTransforming(layer: Node) {
+    for (const tr of activeTransformers) {
+      if (
+        tr.getLayer() === layer ||
+        tr._nodes.some((node) => node.getLayer() === layer)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   constructor(config?: TransformerConfig) {
     // call super constructor
@@ -722,7 +735,7 @@ export class Transformer extends Group {
       x: pos.x - ap.x,
       y: pos.y - ap.y,
     };
-    activeTransformersCount++;
+    activeTransformers.add(this);
     this._fire('transformstart', { evt: e.evt, target: this.getNode() });
     this._nodes.forEach((target) => {
       target._fire('transformstart', { evt: e.evt, target });
@@ -1002,8 +1015,11 @@ export class Transformer extends Group {
     }
     this._removeEvents(e);
   }
-  getAbsoluteTransform() {
-    return this.getTransform();
+  // the transformer positions itself in absolute coordinates (see
+  // _getNodeRect), whatever the transforms of its ancestors are
+  getAbsoluteTransform(top?: Node | null) {
+    const at = this.getTransform();
+    return top ? top.getAbsoluteTransform().copy().invert().multiply(at) : at;
   }
   _removeEvents(e?) {
     if (this._transforming) {
@@ -1017,7 +1033,7 @@ export class Transformer extends Group {
         win.removeEventListener('touchend', this._handleMouseUp, true);
       }
       const node = this.getNode();
-      activeTransformersCount--;
+      activeTransformers.delete(this);
       this._fire('transformend', { evt: e, target: node });
       // redraw layer to restore hit graph
       this.getLayer()?.batchDraw();
@@ -1464,9 +1480,9 @@ export class Transformer extends Group {
     const node = Node.prototype.clone.call(this, obj);
     return node as this;
   }
-  getClientRect() {
+  getClientRect(config?: Parameters<Group['getClientRect']>[0]) {
     if (this.nodes().length > 0) {
-      return super.getClientRect();
+      return super.getClientRect(config);
     } else {
       // if we are detached return zero size
       // so it will be skipped in calculations

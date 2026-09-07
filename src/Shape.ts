@@ -444,7 +444,7 @@ export class Shape<
     const bufferHitCanvas = stage._syncBufferSize(stage.bufferHitCanvas);
 
     bufferHitCanvas.getContext().clear();
-    this.drawHit(bufferHitCanvas, undefined, true);
+    this.drawHit(bufferHitCanvas);
     const p = bufferHitCanvas.context.getImageData(
       Math.floor(point.x),
       Math.floor(point.y),
@@ -686,8 +686,8 @@ export class Shape<
     context.restore();
     return this;
   }
-  drawHit(can?: HitCanvas, top?: Node, skipDragCheck = false) {
-    if (!this.shouldDrawHit(top, skipDragCheck)) {
+  drawHit(can?: HitCanvas, top?: Node) {
+    if (!this.shouldDrawHit(top)) {
       return this;
     }
 

@@ -11,7 +11,8 @@ import type { GetSet, Vector2d } from './types.ts';
 import type { Group } from './Group.ts';
 import type { Shape } from './Shape.ts';
 import { shapes } from './Shape.ts';
-import { _registerNode } from './Global.ts';
+import { _registerNode, Konva } from './Global.ts';
+import { DD } from './DragAndDrop.ts';
 
 export interface LayerConfig extends ContainerConfig {
   clearBeforeDraw?: boolean;
@@ -430,6 +431,28 @@ export class Layer extends Container<Group | Shape> {
     });
 
     return this;
+  }
+  // the hit graph is skipped while a node of the layer (or the stage) is
+  // dragged or a transformer on the layer, or of a node on it, is
+  // transforming, as the layer is redrawn every frame; the draw that follows
+  // restores it
+  shouldDrawHit(top?: Node) {
+    if (!super.shouldDrawHit(top)) {
+      return false;
+    }
+    if (top || Konva.hitOnDragEnabled) {
+      return true;
+    }
+    let underDrag = false;
+    DD._dragElements.forEach((elem) => {
+      if (
+        elem.dragStatus === 'dragging' &&
+        (elem.node.nodeType === 'Stage' || elem.node.getLayer() === this)
+      ) {
+        underDrag = true;
+      }
+    });
+    return !underDrag && !Konva['Transformer']?._isLayerTransforming(this);
   }
   drawHit(can?: HitCanvas, top?: Node) {
     const layer = this.getLayer(),

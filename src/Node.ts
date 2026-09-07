@@ -1233,28 +1233,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       return true;
     }
   }
-  shouldDrawHit(top?: Node, skipDragCheck = false) {
+  shouldDrawHit(top?: Node) {
     if (top) {
       return this._isVisible(top) && this._isListening(top);
     }
-    const layer = this.getLayer();
-
-    let layerUnderDrag = false;
-    DD._dragElements.forEach((elem) => {
-      if (elem.dragStatus !== 'dragging') {
-        return;
-      } else if (elem.node.nodeType === 'Stage') {
-        layerUnderDrag = true;
-      } else if (elem.node.getLayer() === layer) {
-        layerUnderDrag = true;
-      }
-    });
-
-    const dragSkip =
-      !skipDragCheck &&
-      !Konva.hitOnDragEnabled &&
-      (layerUnderDrag || Konva.isTransforming());
-    return this.isListening() && this.isVisible() && !dragSkip;
+    return this.isListening() && this.isVisible();
   }
 
   /**
