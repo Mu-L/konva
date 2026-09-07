@@ -55,4 +55,41 @@ describe('Canvas', function () {
     assert.equal(canvas._canvas.style.height, '50px');
     assert.equal(scales, 1);
   });
+
+  it('the size follows the bitmap, which truncates at a fractional pixel ratio', function () {
+    var canvas = new SceneCanvas({ width: 101, height: 51, pixelRatio: 1.5 });
+    assert.equal(canvas.width, 151);
+    assert.equal(canvas.height, 76);
+    assert.equal(canvas.width, canvas._canvas.width);
+    assert.equal(canvas.height, canvas._canvas.height);
+  });
+
+  it('setSizeIfChanged() leaves the bitmap alone for the same size, including a NaN one', function () {
+    var canvas = new SceneCanvas({ width: 10, height: 10, pixelRatio: 2 });
+    var sets = countCalls(canvas, 'setSize', () => {
+      canvas.setSizeIfChanged(100, 50);
+      canvas.setSizeIfChanged(100, 50);
+      canvas.setSizeIfChanged(NaN, NaN);
+      canvas.setSizeIfChanged(NaN, NaN);
+    });
+    assert.equal(sets, 2);
+  });
+
+  it('setPixelRatio(), setWidth() and setHeight() keep the logical size at a fractional pixel ratio', function () {
+    var canvas = new SceneCanvas({ width: 101, height: 51, pixelRatio: 1.5 });
+    canvas.setPixelRatio(2);
+    assert.equal(canvas.width, 202);
+    assert.equal(canvas.height, 102);
+    assert.equal(canvas._canvas.style.width, '101px');
+    assert.equal(canvas._canvas.style.height, '51px');
+
+    canvas.setPixelRatio(1.5);
+    canvas.setWidth(200);
+    assert.equal(canvas.width, 300);
+    assert.equal(canvas.height, 76);
+    assert.equal(canvas._canvas.style.height, '51px');
+    canvas.setHeight(100);
+    assert.equal(canvas.height, 150);
+    assert.equal(canvas._canvas.style.width, '200px');
+  });
 });

@@ -764,8 +764,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     const ratio = sceneCanvas.pixelRatio;
     filterCanvas.setSizeIfChanged(
-      sceneCanvas.width / sceneCanvas.pixelRatio,
-      sceneCanvas.height / sceneCanvas.pixelRatio
+      sceneCanvas._logicalWidth,
+      sceneCanvas._logicalHeight
     );
     if (useNativeOnly) {
       const finalFilter = (filters as unknown as string[]).join(' ');

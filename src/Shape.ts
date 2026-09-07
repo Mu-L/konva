@@ -613,10 +613,7 @@ export class Shape<
       } else if (!bc.width) {
         // cache() and toCanvas() hand over an empty buffer: size it to the
         // destination on first use and shift it to the buffer origin
-        bc.setSize(
-          canvas.width / canvas.pixelRatio,
-          canvas.height / canvas.pixelRatio
-        );
+        bc.setSize(canvas._logicalWidth, canvas._logicalHeight);
         bufferContext.translate(-bc.x, -bc.y);
       } else {
         // the buffer is translated, so reset the transform before clearing

@@ -1880,4 +1880,47 @@ describe('Caching', function () {
     assert.equal(layer.getIntersection({ x: 140, y: 140 }), rect);
     assert.equal(layer.getIntersection({ x: 160, y: 160 }), null);
   });
+
+  it('a buffered shape keeps its last pixel column in a cache at a fractional pixel ratio', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({
+      width: 35,
+      height: 35,
+      fill: 'red',
+      stroke: 'red',
+      strokeWidth: 2,
+      opacity: 0.5,
+    });
+    layer.add(rect);
+    rect.cache({ pixelRatio: 1.75, x: 0, y: 0, width: 35, height: 35 });
+
+    var scene = rect._getCanvasCache().scene;
+    assert.equal(scene.width, 61);
+    var ctx = scene.getContext()._context;
+    // the opacity is applied when the cache is drawn, not inside it
+    assert.equal(ctx.getImageData(scene.width - 1, 10, 1, 1).data[3], 255);
+    assert.equal(ctx.getImageData(10, scene.height - 1, 1, 1).data[3], 255);
+  });
+
+  it('the filter canvas of a cache has the size of the scene canvas at a fractional pixel ratio', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ width: 35, height: 35, fill: 'red' });
+    layer.add(rect);
+    rect.cache({ pixelRatio: 1.75, x: 0, y: 0, width: 35, height: 35 });
+    rect.filters([Konva.Filters.Invert]);
+    layer.draw();
+
+    var cache = rect._getCanvasCache();
+    assert.equal(cache.filter.width, cache.scene.width);
+    assert.equal(cache.filter.height, cache.scene.height);
+    // the last column is drawn (inverted red); the backends antialias the
+    // edge of the 1.75x cache differently, so only require it to be visible
+    var data = layer.getContext().getImageData(34, 10, 1, 1).data;
+    assert.deepEqual(Array.from(data.slice(0, 3)), [0, 255, 255]);
+    assert.isAbove(data[3], 100);
+  });
 });

@@ -48,8 +48,12 @@ export class Canvas {
   pixelRatio = 1;
   _canvas: HTMLCanvasElement;
   context: Context;
+  // the bitmap size, in device pixels
   width = 0;
   height = 0;
+  // the size the canvas was given, in CSS pixels; the bitmap truncates it
+  _logicalWidth = 0;
+  _logicalHeight = 0;
 
   isCache = false;
   // origin of a buffer canvas in the coordinate space of the canvas it is
@@ -112,18 +116,14 @@ export class Canvas {
    * layer.getCanvas().setPixelRatio(3);
    */
   setPixelRatio(pixelRatio) {
-    const previousRatio = this.pixelRatio;
     this.pixelRatio = pixelRatio;
-    this.setSize(
-      this.getWidth() / previousRatio,
-      this.getHeight() / previousRatio
-    );
+    this.setSize(this._logicalWidth, this._logicalHeight);
   }
   setWidth(width) {
-    this.setSize(width, this.height / this.pixelRatio);
+    this.setSize(width, this._logicalHeight);
   }
   setHeight(height) {
-    this.setSize(this.width / this.pixelRatio, height);
+    this.setSize(this._logicalWidth, height);
   }
   getWidth() {
     return this.width;
@@ -131,14 +131,21 @@ export class Canvas {
   getHeight() {
     return this.height;
   }
+  // the bitmap holds whole pixels: a fractional pixel ratio truncates, and
+  // a size that does not match the bitmap would resample every draw of it
+  _bitmapSize(size: number) {
+    return Math.floor((size || 0) * this.pixelRatio);
+  }
   setSize(width, height) {
     width = width || 0;
     height = height || 0;
     const pixelRatio = this.pixelRatio;
+    this._logicalWidth = width;
+    this._logicalHeight = height;
     // take into account pixel ratio. Assigning a dimension reallocates the
     // bitmap and resets the whole context state, so scale once after both
-    this.width = this._canvas.width = width * pixelRatio;
-    this.height = this._canvas.height = height * pixelRatio;
+    this.width = this._canvas.width = this._bitmapSize(width);
+    this.height = this._canvas.height = this._bitmapSize(height);
     this._canvas.style.width = width + 'px';
     this._canvas.style.height = height + 'px';
     this.getContext()._context.scale(pixelRatio, pixelRatio);
@@ -147,8 +154,8 @@ export class Canvas {
   // so lazily sized canvases use this to stay untouched when nothing changed
   setSizeIfChanged(width: number, height: number) {
     if (
-      this.width !== width * this.pixelRatio ||
-      this.height !== height * this.pixelRatio
+      this.width !== this._bitmapSize(width) ||
+      this.height !== this._bitmapSize(height)
     ) {
       this.setSize(width, height);
     }
