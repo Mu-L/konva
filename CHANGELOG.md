@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+- Fixed the `Konva.Node` JSDoc block being attached to a private helper, which dropped the `Konva.Node` page from the API reference
+
 ## 10.4.0 (2026-09-07)
 
 - Added `destroy` event, fired at the start of `node.destroy()`. `Transformer` drops a destroyed node from `nodes()` and `Tween` stops the tweens of a destroyed node

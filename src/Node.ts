@@ -254,14 +254,6 @@ export type ImageConfig = CanvasConfig & {
   quality?: number;
 };
 
-/**
- * Node constructor. Nodes are entities that can be transformed, layered,
- * and have bound events. The stage, layers, groups, and shapes all extend Node.
- * @constructor
- * @memberof Konva
- * @param {Object} config
- * @@nodeParams
- */
 // "perfect drawing" buffer for cache() and toCanvas(): it mirrors the target
 // canvas and is drawn back at (x, y) in the target's coordinate space.
 // It starts empty and Shape.drawScene sizes it on first use, so nodes
@@ -277,6 +269,14 @@ function createBufferCanvas(target: SceneCanvas, x: number, y: number) {
   return bufferCanvas;
 }
 
+/**
+ * Node constructor. Nodes are entities that can be transformed, layered,
+ * and have bound events. The stage, layers, groups, and shapes all extend Node.
+ * @constructor
+ * @memberof Konva
+ * @param {Object} config
+ * @@nodeParams
+ */
 export abstract class Node<Config extends NodeConfig = NodeConfig> {
   _id = idCounter++;
   eventListeners: {
