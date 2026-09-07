@@ -9,7 +9,7 @@ import {
   simulatePointerUp,
 } from './test-utils.ts';
 
-describe.skip('PointerEvents', function () {
+describe('PointerEvents', function () {
   // ======================================================
   it('pointerdown pointerup pointermove', function (done) {
     var stage = addStage();

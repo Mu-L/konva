@@ -148,6 +148,9 @@ export function equal(a, b, tolerance, secondTol) {
     length = aData.length;
 
   tolerance = tolerance || 0;
+  if (tolerance >= 255) {
+    throw new Error('A tolerance of ' + tolerance + ' accepts any image');
+  }
 
   let count = 0;
   if (!equalDimensions(a, b)) return false;

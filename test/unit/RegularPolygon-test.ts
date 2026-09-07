@@ -174,7 +174,7 @@ describe('RegularPolygon', function () {
       width: 95.10565162951536,
     });
 
-    cloneAndCompareLayer(layer, 254);
+    cloneAndCompareLayer(layer, 100);
   });
 
   it('triangle - bounding box', function () {

@@ -310,7 +310,7 @@ describe('MouseEvents', function () {
     }, 20);
   });
 
-  it.skip('mouseleave and mouseenter', function () {
+  it('mouseleave and mouseenter', function () {
     var stage = addStage();
     var layer = new Konva.Layer({
       throttle: 999,

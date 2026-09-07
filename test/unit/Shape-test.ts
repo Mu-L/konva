@@ -816,7 +816,6 @@ describe('Shape', function () {
   });
 
   // ======================================================
-  // hard to emulate the same drawing
   it('fill and stroke with shadow and opacity', function () {
     var stage = addStage();
     var layer = new Konva.Layer();
@@ -841,44 +840,16 @@ describe('Shape', function () {
     layer.add(rect);
     stage.add(layer);
 
-    const { canvas, context } = createCanvasAndContext();
-    context.globalAlpha = 0.3;
-
-    // draw shadow
-    context.save();
-    context.beginPath();
-    context.rect(95, 45, 110, 60);
-    context.closePath();
-    context.shadowColor = 'grey';
-    context.shadowBlur = 5 * Konva.pixelRatio;
-    context.shadowOffsetX = 20 * Konva.pixelRatio;
-    context.shadowOffsetY = 20 * Konva.pixelRatio;
-    context.fillStyle = 'black';
-    context.fill();
-    context.restore();
-
-    // draw "stroke"
-    context.save();
-    context.beginPath();
-    context.moveTo(100, 50);
-    context.lineTo(200, 50);
-    context.lineTo(200, 100);
-    context.lineTo(100, 100);
-    context.closePath();
-    context.lineWidth = 10;
-    context.strokeStyle = 'black';
-    context.stroke();
-    context.restore();
-
-    context.save();
-    context.beginPath();
-    context.fillStyle = 'green';
-    context.rect(105, 55, 90, 40);
-    context.closePath();
-    context.fill();
-    context.restore();
-
-    compareLayerAndCanvas(layer, canvas, 260);
+    // a shape with fill, stroke and opacity is drawn through a buffer, so
+    // that the stroke does not show through the fill. The shadow and the
+    // opacity are applied once, when the buffer is drawn on the layer
+    assert.equal(
+      layer.getContext().getTrace(true),
+      'clearRect();save();shadowColor;shadowBlur;shadowOffsetX;shadowOffsetY;globalAlpha;drawImage();restore();'
+    );
+    var trace = layer.getContext().getTrace();
+    assert.include(trace, 'shadowBlur=5;shadowOffsetX=20;shadowOffsetY=20;');
+    assert.include(trace, 'globalAlpha=0.5;drawImage(');
 
     if (isBrowser) {
       var trace = layer.getContext().getTrace();
@@ -1578,7 +1549,7 @@ describe('Shape', function () {
       height: text.height(),
     });
 
-    compareCanvases(canvas2, canvas1, 255, 10);
+    compareCanvases(canvas2, canvas1, 200, 10);
   });
 
   it('export when buffer canvas is used should handle scaling correctly another time', async function () {

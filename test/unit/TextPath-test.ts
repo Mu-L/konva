@@ -763,7 +763,7 @@ describe('TextPath', function () {
     assert.equal(called, true);
   });
 
-  it.skip('linear gradient for path', function () {
+  it('linear gradient for path', function () {
     var stage = addStage();
 
     var layer = new Konva.Layer();

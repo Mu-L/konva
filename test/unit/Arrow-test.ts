@@ -227,7 +227,8 @@ describe('Arrow', function () {
     arrow.cache();
     layer.draw();
 
-    cloneAndCompareLayer(layer, 255, 50);
+    // a few edge pixels of the arrow head differ after caching
+    cloneAndCompareLayer(layer, 128, 50);
   });
 
   it('getClientRect', function () {
