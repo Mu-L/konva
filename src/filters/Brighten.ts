@@ -38,11 +38,11 @@ Factory.addGetterSetter(
   Factory.afterSetFilter
 );
 /**
- * get/set filter brightness.  The brightness is a number between -1 and 1.&nbsp; Positive values
- *  brighten the pixels and negative values darken them. Use with {@link Konva.Filters.Brighten} filter.
+ * get/set filter brightness. With {@link Konva.Filters.Brighten} it is a number between -1 and 1
+ *  added to every channel: positive values brighten the pixels and negative values darken them.
+ *  With {@link Konva.Filters.Brightness} it is a CSS-like multiplier: 1 is no change, 1.5 is 50% brighter.
  * @name Konva.Node#brightness
  * @method
-
- * @param {Number} brightness value between -1 and 1
+ * @param {Number} brightness
  * @returns {Number}
  */

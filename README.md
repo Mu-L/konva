@@ -60,7 +60,7 @@ stage.add(layer);
 
 # Browsers support
 
-Konva works in modern mobile and desktop browsers that support ES2015.
+Konva works in modern mobile and desktop browsers that support ES2018.
 
 # Debugging
 

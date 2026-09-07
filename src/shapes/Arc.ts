@@ -32,10 +32,10 @@ export interface ArcConfig extends ShapeConfig {
  *   innerRadius: 40,
  *   outerRadius: 80,
  *   fill: 'red',
- *   stroke: 'black'
+ *   stroke: 'black',
  *   strokeWidth: 5,
  *   angle: 60,
- *   rotationDeg: -120
+ *   rotation: -120
  * });
  */
 export class Arc extends Shape<ArcConfig> {

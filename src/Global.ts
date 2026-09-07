@@ -103,7 +103,7 @@ export const Konva = {
    * Global pixel ratio configuration. KonvaJS automatically detect pixel ratio of current device.
    * But you may override such property, if you want to use your value. Set this value before any components initializations.
    * @property pixelRatio
-   * @default undefined
+   * @default window.devicePixelRatio || 1
    * @name pixelRatio
    * @memberof Konva
    * @example
@@ -113,8 +113,8 @@ export const Konva = {
   pixelRatio: (typeof window !== 'undefined' && window.devicePixelRatio) || 1,
 
   /**
-   * Drag distance property. If you start to drag a node you may want to wait until pointer is moved to some distance from start point,
-   * only then start dragging. Default is 3px.
+   * Drag distance property. If you start to drag a node you may want to wait until pointer is moved to some distance from start point
+   * on either axis, only then start dragging. Default is 3px.
    * @property dragDistance
    * @default 3
    * @memberof Konva
@@ -134,7 +134,7 @@ export const Konva = {
    */
   angleDeg: true,
   /**
-   * Show different warnings about errors or wrong API usage
+   * Show warnings about wrong API usage (`Konva.Util.warn`). Errors are always printed
    * @property showWarnings
    * @default true
    * @memberof Konva
@@ -163,6 +163,11 @@ export const Konva = {
   isDragging(): boolean {
     return Konva['DD'].isDragging;
   },
+  /**
+   * returns whether or not a Transformer is currently transforming a node
+   * @method
+   * @memberof Konva
+   */
   isTransforming(): boolean {
     return Konva['Transformer']?.isTransforming() ?? false;
   },
@@ -186,7 +191,6 @@ export const Konva = {
    * Konva.releaseCanvasOnDestroy = true;
    */
   releaseCanvasOnDestroy: true,
-  // user agent
   document: glob.document,
   // insert Konva into global namespace (window)
   // it is required for npm packages

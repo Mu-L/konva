@@ -816,7 +816,7 @@ export class Path extends Shape<PathConfig> {
         if (Math.abs(start - end) < inc) {
           inc = Math.abs(start - end);
         }
-        // Note: for purpose of calculating arc length, not going to worry about rotating X-axis by angle psi
+        // the arc length does not depend on the x-axis rotation psi, so it is left out
         p1 = path.getPointOnEllipticalArc(
           points[0],
           points[1],

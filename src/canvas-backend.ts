@@ -34,4 +34,6 @@ Konva.Util.createImageElement = () => {
 
 Konva._renderBackend = 'node-canvas';
 
+// the core Konva object, without shapes and filters. `import 'konva'` extends
+// this same object with them
 export default Konva;

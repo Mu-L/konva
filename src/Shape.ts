@@ -422,7 +422,8 @@ export class Shape<
    * determines if point is in the shape, regardless if other shapes are on top of it.  Note: because
    *  this method clears a temporary canvas and then redraws the shape, it performs very poorly if executed many times
    *  consecutively.  Please use the {@link Konva.Stage#getIntersection} method if at all possible
-   *  because it performs much better
+   *  because it performs much better. A shape that is invisible, not listening or not on a stage
+   *  never intersects
    * @method
    * @name Konva.Shape#intersects
    * @param {Object} point
@@ -1755,7 +1756,7 @@ Factory.addGetterSetter(Shape, 'strokeLinearGradientStartPointX', 0);
 
 /**
  * get/set stroke linear gradient start point x
- * @name Konva.Shape#linearLinearGradientStartPointX
+ * @name Konva.Shape#strokeLinearGradientStartPointX
  * @method
  * @param {Number} x
  * @returns {Number}

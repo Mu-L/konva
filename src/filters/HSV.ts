@@ -12,7 +12,7 @@ import { getNumberValidator } from '../Validators.ts';
  * @author ippo615
  * @example
  * image.filters([Konva.Filters.HSV]);
- * image.value(200);
+ * image.value(1); // twice as bright
  */
 
 export const HSV: Filter = function (imageData) {
@@ -37,15 +37,15 @@ export const HSV: Filter = function (imageData) {
   const vsu = v * s * Math.cos((h * Math.PI) / 180),
     vsw = v * s * Math.sin((h * Math.PI) / 180);
   // (result spot)(source spot)
-  const rr = 0.299 * v + 0.701 * vsu + 0.167 * vsw,
+  const rr = 0.299 * v + 0.701 * vsu + 0.168 * vsw,
     rg = 0.587 * v - 0.587 * vsu + 0.33 * vsw,
     rb = 0.114 * v - 0.114 * vsu - 0.497 * vsw;
   const gr = 0.299 * v - 0.299 * vsu - 0.328 * vsw,
     gg = 0.587 * v + 0.413 * vsu + 0.035 * vsw,
-    gb = 0.114 * v - 0.114 * vsu + 0.293 * vsw;
+    gb = 0.114 * v - 0.114 * vsu + 0.292 * vsw;
   const br = 0.299 * v - 0.3 * vsu + 1.25 * vsw,
-    bg = 0.587 * v - 0.586 * vsu - 1.05 * vsw,
-    bb = 0.114 * v + 0.886 * vsu - 0.2 * vsw;
+    bg = 0.587 * v - 0.588 * vsu - 1.05 * vsw,
+    bb = 0.114 * v + 0.886 * vsu - 0.203 * vsw;
 
   for (let i = 0; i < nPixels; i += 4) {
     const r = data[i + 0];

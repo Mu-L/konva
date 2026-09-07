@@ -221,6 +221,7 @@ const activeTransformers = new Set<Transformer>();
  * @param {Array} [config.rotationSnaps] Array of angles for rotation snaps. Default is []
  * @param {Number} [config.rotationSnapTolerance] Snapping tolerance. If closer than this it will snap. Default is 5
  * @param {Number} [config.rotateAnchorOffset] Default is 50
+ * @param {Number} [config.rotateAnchorAngle] Angle of the rotate anchor around the box, in degrees. Default is 0 (top)
  * @param {String} [config.rotateAnchorCursor] Default is crosshair
  * @param {Number} [config.padding] Default is 0
  * @param {Boolean} [config.borderEnabled] Should we draw border? Default is true
@@ -229,7 +230,7 @@ const activeTransformers = new Set<Transformer>();
  * @param {Array} [config.borderDash] Array for border dash.
  * @param {String} [config.anchorFill] Anchor fill color
  * @param {String} [config.anchorStroke] Anchor stroke color
- * @param {String} [config.anchorCornerRadius] Anchor corner radius
+ * @param {Number} [config.anchorCornerRadius] Anchor corner radius
  * @param {Number} [config.anchorStrokeWidth] Anchor stroke size
  * @param {Number} [config.anchorSize] Default is 10
  * @param {Boolean} [config.keepRatio] Should we keep ratio when we are moving edges? Default is true
@@ -237,8 +238,10 @@ const activeTransformers = new Set<Transformer>();
  * @param {Boolean} [config.centeredScaling] Should we resize relative to node's center? Default is false
  * @param {Array} [config.enabledAnchors] Array of names of enabled handles
  * @param {Boolean} [config.flipEnabled] Can we flip/mirror shape on transform?. True by default
- * @param {Function} [config.boundBoxFunc] Bounding box function
- * @param {Function} [config.ignoreStroke] Should we ignore stroke size? Default is false
+ * @param {Function} [config.boundBoxFunc] Bounding box function, see {@link Konva.Transformer#boundBoxFunc}
+ * @param {Function} [config.anchorDragBoundFunc] Function bounding the position of a dragged anchor, see {@link Konva.Transformer#anchorDragBoundFunc}
+ * @param {Function} [config.anchorStyleFunc] Function styling every anchor, see {@link Konva.Transformer#anchorStyleFunc}
+ * @param {Boolean} [config.ignoreStroke] Should we ignore stroke size? Default is false
  * @param {Boolean} [config.useSingleNodeRotation] When just one node attached, should we use its rotation for transformer?
  * @param {Boolean} [config.shouldOverdrawWholeArea] Should we fill whole transformer area with fake transparent shape to enable dragging from empty spaces?
  * @example
@@ -1972,7 +1975,8 @@ Factory.addGetterSetter(Transformer, 'nodes');
 Factory.addGetterSetter(Transformer, 'node');
 
 /**
- * get/set bounding box function. **IMPORTANT!** boundBondFunc operates in absolute coordinates.
+ * get/set bounding box function. **IMPORTANT!** boundBoxFunc operates in absolute coordinates.
+ *  Both boxes are `{ x, y, width, height, rotation }`, with the rotation in radians.
  * @name Konva.Transformer#boundBoxFunc
  * @method
  * @param {Function} func
@@ -2027,7 +2031,7 @@ Factory.addGetterSetter(Transformer, 'anchorDragBoundFunc');
  * transformer.anchorStyleFunc(function(anchor) {
  *  // anchor is a simple Konva.Rect instance
  *  // it will be executed AFTER all attributes are set, like 'anchorStrokeWidth' or 'anchorFill'
- *  if (anchor.hasName('.rotater')) {
+ *  if (anchor.hasName('rotater')) {
  *    // make rotater anchor filled black and looks like a circle
  *    anchor.fill('black');
  *    anchor.cornerRadius(anchor.width() / 2);

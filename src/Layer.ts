@@ -332,9 +332,10 @@ export class Layer extends Container<Group | Shape> {
 
   /**
    * get visible intersection shape. This is the preferred
-   * method for determining if a point intersects a shape or not
-   * also you may pass optional selector parameter to return ancestor of intersected shape
-   * nodes with listening set to false will not be detected
+   * method for determining if a point intersects a shape or not.
+   * It reads the hit canvas, so it finds what pointer events would: nodes with
+   * listening set to false or invisible nodes are not detected, a shape with opacity 0
+   * is, and `hitStrokeWidth` counts. The position is in stage coordinates
    * @method
    * @name Konva.Layer#getIntersection
    * @param {Object} pos

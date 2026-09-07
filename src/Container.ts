@@ -299,8 +299,8 @@ export abstract class Container<
    * get all shapes that intersect a point.  Note: because this method must clear a temporary
    * canvas and redraw every shape inside the container, it should only be used for special situations
    * because it performs very poorly.  Please use the {@link Konva.Stage#getIntersection} method if at all possible
-   * because it performs much better
-   * nodes with listening set to false will not be detected
+   * because it performs much better.
+   * Nodes with listening set to false or invisible nodes are not detected
    * @method
    * @name Konva.Container#getAllIntersections
    * @param {Object} pos

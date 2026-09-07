@@ -4,7 +4,7 @@ import type { IRect, RGB, Vector2d } from './types.ts';
 
 const NODE_ERROR = `Konva.js unsupported environment.
 
-Looks like you are trying to use Konva.js in Node.js environment. because "document" object is undefined.
+Looks like you are trying to use Konva.js in Node.js environment (or in a Web Worker), because "document" object is undefined.
 
 To use Konva.js in Node.js environment, you need to use the "canvas-backend" or "skia-backend" module.
 

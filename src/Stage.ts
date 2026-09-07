@@ -398,8 +398,10 @@ export class Stage extends Container<Layer, StageConfig> {
 
   /**
    * get visible intersection shape. This is the preferred
-   *  method for determining if a point intersects a shape or not
-   * nodes with listening set to false will not be detected
+   *  method for determining if a point intersects a shape or not.
+   *  It reads the hit canvas, so it finds what pointer events would: nodes with
+   *  listening set to false or invisible nodes are not detected, a shape with opacity 0
+   *  is, and `hitStrokeWidth` counts. The position is in stage coordinates
    * @method
    * @name Konva.Stage#getIntersection
    * @param {Object} pos

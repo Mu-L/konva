@@ -30,10 +30,10 @@ export interface WedgeConfig extends ShapeConfig {
  * var wedge = new Konva.Wedge({
  *   radius: 40,
  *   fill: 'red',
- *   stroke: 'black'
+ *   stroke: 'black',
  *   strokeWidth: 5,
- *   angleDeg: 60,
- *   rotationDeg: -120
+ *   angle: 60,
+ *   rotation: -120
  * });
  */
 export class Wedge extends Shape<WedgeConfig> {
@@ -108,7 +108,7 @@ Factory.addGetterSetter(Wedge, 'angle', 0, getNumberValidator());
  * get/set clockwise flag
  * @name Konva.Wedge#clockwise
  * @method
- * @param {Number} clockwise
+ * @param {Boolean} clockwise
  * @returns {Number}
  * @example
  * // get clockwise flag

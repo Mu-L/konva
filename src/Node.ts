@@ -158,7 +158,7 @@ export type NodeConfig = {
   offsetY?: number;
   draggable?: boolean;
   dragDistance?: number;
-  dragBoundFunc?: (this: Node, pos: Vector2d) => Vector2d;
+  dragBoundFunc?: (this: Node, pos: Vector2d, evt: any) => Vector2d;
   preventDefault?: boolean;
   globalCompositeOperation?: globalCompositeOperationType;
   filters?: Filters;
@@ -412,7 +412,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @param {Number} [config.offset]  increase canvas size by `offset` pixel in all directions.
    * @param {Boolean} [config.drawBorder] when set to true, a red border will be drawn around the cached
    *  region for debugging purposes
-   * @param {Number} [config.pixelRatio] change quality (or pixel ratio) of cached image. pixelRatio = 2 will produce 2x sized cache.
+   * @param {Number} [config.pixelRatio] pixel ratio of the cache canvas, the canvas pixels per CSS pixel of the node. Default is `Konva.pixelRatio`, the device pixel ratio. A higher value keeps the cache sharp when the node is scaled up.
    * @param {Boolean} [config.imageSmoothingEnabled] control imageSmoothingEnabled property of created canvas for cache
    * @param {Number} [config.hitCanvasPixelRatio] change quality (or pixel ratio) of cached hit canvas.
    * @returns {Konva.Node}
@@ -1291,6 +1291,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @method
    * @name Konva.Node#getDepth
    * @returns {Integer}
+   * @example
+   * var depth = shape.getDepth(); // 2 for a shape right inside of a layer
    */
   getDepth() {
     let depth = 0,
@@ -2857,12 +2859,13 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   globalCompositeOperation: GetSet<globalCompositeOperationType, this>;
 
   /**
-   * create node with JSON string or an Object.  De-serializtion does not generate custom
-   *  shape drawing functions, images, or event handlers (this would make the
-   *  serialized object huge).  If your app uses custom shapes, images, and
-   *  event handlers (it probably does), then you need to select the appropriate
-   *  shapes after loading the stage and set these properties via on(), setSceneFunc(),
-   *  and setImage() methods
+   * create node with JSON string or an Object. Deserialization restores attributes only,
+   *  not functions, images or event handlers (that would make the serialized object huge):
+   *  `sceneFunc`/`hitFunc` of custom shapes, images and `fillPatternImage`, `clipFunc`,
+   *  `dragBoundFunc`, filter functions, the `nodes`, `boundBoxFunc` and `anchorStyleFunc`
+   *  of a Transformer, typed arrays and the `cache()` state. If your app uses them (it probably
+   *  does), select the nodes after loading the stage and set these properties again with
+   *  `on()`, `sceneFunc()`, `image()` and so on
    * @method
    * @memberof Konva.Node
    * @param {String|Object} data string or object
@@ -3281,7 +3284,8 @@ addGetterSetter(Node, 'offsetY', 0, getNumberValidator());
 addGetterSetter(Node, 'dragDistance', undefined, getNumberValidator());
 
 /**
- * get/set drag distance
+ * get/set drag distance. A drag starts once the pointer moved this far from where it
+ *  went down, on either axis. Default is `Konva.dragDistance`
  * @name Konva.Node#dragDistance
  * @method
  * @param {Number} distance
@@ -3465,10 +3469,12 @@ addGetterSetter(Node, 'size');
 
 /**
  * get/set drag bound function.  This is used to override the default
- *  drag and drop position.
+ *  drag and drop position. The function is called with the absolute position
+ *  the node is about to get and the native event, and must return the
+ *  absolute position to use
  * @name Konva.Node#dragBoundFunc
  * @method
- * @param {Function} dragBoundFunc
+ * @param {Function} dragBoundFunc function(pos, evt) returning `{ x, y }`
  * @returns {Function}
  * @example
  * // get drag bound function

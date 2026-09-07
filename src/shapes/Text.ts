@@ -221,14 +221,14 @@ function checkDefaultFill(config?: TextConfig) {
  * @param {String} [config.fontStyle] can be 'normal', 'italic', or 'bold', '500' or even 'italic bold'.  'normal' is the default.
  * @param {String} [config.fontVariant] can be normal or small-caps.  Default is normal
  * @param {String} [config.textDecoration] can be line-through, underline or empty string. Default is empty string.
- * @param {String} [config.underlineOffset] offset for underline line. Default is calculated based on font size.
+ * @param {Number} [config.underlineOffset] offset for underline line. Default is calculated based on font size.
  * @param {String} config.text
  * @param {String} [config.align] can be left, center, right or justify
  * @param {String} [config.verticalAlign] can be top, middle or bottom
  * @param {Number} [config.padding]
  * @param {Number} [config.lineHeight] default is 1
  * @param {String} [config.wrap] can be "word", "char", or "none". Default is word
- * @param {Boolean} [config.ellipsis] can be true or false. Default is false. if Konva.Text config is set to wrap="none" and ellipsis=true, then it will add "..." to the end
+ * @param {Boolean} [config.ellipsis] can be true or false. Default is false. If true, text that does not fit is cut and ends with "…". That needs a fixed width, plus either a fixed height or wrap="none"
  * @@shapeParams
  * @@nodeParams
  * @example
@@ -1047,9 +1047,9 @@ Factory.addGetterSetter(Text, 'lineHeight', 1, getNumberValidator());
 Factory.addGetterSetter(Text, 'wrap', WORD);
 
 /**
- * get/set ellipsis. Can be true or false. Default is false. If ellipses is true,
- * Konva will add "..." at the end of the text if it doesn't have enough space to write characters.
- * That is possible only when you limit both width and height of the text
+ * get/set ellipsis. Can be true or false. Default is false. If ellipsis is true,
+ * Konva cuts the text that does not fit and ends it with "…" (one character).
+ * That needs a fixed width, plus either a fixed height or wrap set to "none"
  * @name Konva.Text#ellipsis
  * @method
  * @param {Boolean} ellipsis

@@ -192,7 +192,8 @@ export interface TweenConfig extends NodeConfig, TweenOwnConfig {}
  *   node: node,
  *   duration: 1,
  *   easing: Konva.Easings.EaseInOut,
- *   onUpdate: () => console.log('node attrs updated')
+ *   yoyo: false, // play back and forth
+ *   onUpdate: () => console.log('node attrs updated'),
  *   onFinish: () => console.log('finished'),
  *   // set new values for any attributes of a passed node
  *   rotation: 360,
@@ -514,8 +515,8 @@ export class Tween {
   /**
    * seek
    * @method
-   * @name Konva.Tween#seek(
-   * @param {Integer} t time in seconds between 0 and the duration
+   * @name Konva.Tween#seek
+   * @param {Number} t time in seconds between 0 and the duration
    * @returns {Tween}
    */
   seek(t) {

@@ -288,17 +288,17 @@ Factory.addGetterSetter(Sprite, 'animations');
 Factory.addGetterSetter(Sprite, 'frameOffsets');
 
 /**
- * get/set offsets map
- * @name Konva.Sprite#offsets
+ * get/set frame offsets map
+ * @name Konva.Sprite#frameOffsets
  * @method
- * @param {Object} offsets
+ * @param {Object} frameOffsets
  * @returns {Object}
  * @example
- * // get offsets map
- * var offsets = sprite.offsets();
+ * // get frame offsets map
+ * var offsets = sprite.frameOffsets();
  *
- * // set offsets map
- * sprite.offsets({
+ * // set frame offsets map
+ * sprite.frameOffsets({
  *   standing: [
  *     // x, y (6 frames)
  *     0, 0,
