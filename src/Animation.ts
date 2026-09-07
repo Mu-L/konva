@@ -3,17 +3,9 @@ import type { Layer } from './Layer.ts';
 import type { IFrame, AnimationFn } from './types.ts';
 import { Util } from './Util.ts';
 
-const now = (function (): () => number {
-  if (glob.performance && glob.performance.now) {
-    return function () {
-      return glob.performance.now();
-    };
-  }
-
-  return function () {
-    return new Date().getTime();
-  };
-})();
+const now: () => number = glob.performance?.now
+  ? () => glob.performance.now()
+  : Date.now;
 
 /**
  * Animation constructor.
@@ -62,12 +54,9 @@ export class Animation {
    * @return {Konva.Animation} this
    */
   setLayers(layers: null | Layer | Layer[]) {
-    let lays: Layer[] = [];
-    // if passing in no layers
-    if (layers) {
-      lays = Array.isArray(layers) ? layers : [layers];
-    }
-    this.layers = lays;
+    // a copy, so that addLayer() never pushes into the caller's array
+    // (stage.getLayers() hands over the children of the stage)
+    this.layers = layers ? ([] as Layer[]).concat(layers) : [];
     return this;
   }
   /**
@@ -107,16 +96,7 @@ export class Animation {
    * @return {Bool} is animation running?
    */
   isRunning() {
-    const a = Animation;
-    const animations = a.animations;
-    const len = animations.length;
-
-    for (let n = 0; n < len; n++) {
-      if (animations[n].id === this.id) {
-        return true;
-      }
-    }
-    return false;
+    return Animation.animations.has(this);
   }
   /**
    * start animation
@@ -148,80 +128,39 @@ export class Animation {
     this.frame.frameRate = 1000 / this.frame.timeDiff;
   }
 
-  static animations: Array<Animation> = [];
+  static animations = new Set<Animation>();
   static animIdCounter = 0;
   static animRunning = false;
 
-  static _addAnimation(anim) {
-    this.animations.push(anim);
+  static _addAnimation(anim: Animation) {
+    this.animations.add(anim);
     this._handleAnimation();
   }
-  static _removeAnimation(anim) {
-    const id = anim.id;
-    const animations = this.animations;
-    const len = animations.length;
-
-    for (let n = 0; n < len; n++) {
-      if (animations[n].id === id) {
-        this.animations.splice(n, 1);
-        break;
-      }
-    }
+  static _removeAnimation(anim: Animation) {
+    this.animations.delete(anim);
   }
 
   static _runFrames() {
-    const layerHash = {};
-    const animations = this.animations;
-    /*
-     * loop through all animations and execute animation
-     *  function.  if the animation object has specified node,
-     *  we can add the node to the nodes hash to eliminate
-     *  drawing the same node multiple times.  The node property
-     *  can be the stage itself or a layer
-     */
-    /*
-     * WARNING: don't cache animations.length because it could change while
-     * the for loop is running, causing a JS error
-     */
-
-    for (let n = 0; n < animations.length; n++) {
-      const anim = animations[n];
-      const layers = anim.layers;
-      const func = anim.func;
-
+    // every layer is drawn once, however many animations touch it
+    const layersToDraw = new Set<Layer>();
+    // an animation may stop or restart itself, or another one, inside its
+    // function: each one runs at most once per frame, a stopped one not at all
+    Array.from(this.animations).forEach((anim) => {
+      if (!this.animations.has(anim)) {
+        return;
+      }
       anim._updateFrameObject(now());
-      const layersLen = layers.length;
-
-      // if animation object has a function, execute it
-      let needRedraw;
-      if (func) {
-        // allow anim bypassing drawing
-        needRedraw = func.call(anim, anim.frame) !== false;
-      } else {
-        needRedraw = true;
+      // the function returns false to skip the redraw
+      if (anim.func && anim.func.call(anim, anim.frame) === false) {
+        return;
       }
-      if (!needRedraw) {
-        continue;
-      }
-      for (let i = 0; i < layersLen; i++) {
-        const layer = layers[i];
-
-        if (layer._id !== undefined) {
-          layerHash[layer._id] = layer;
-        }
-      }
-    }
-
-    for (const key in layerHash) {
-      if (!layerHash.hasOwnProperty(key)) {
-        continue;
-      }
-      layerHash[key].batchDraw();
-    }
+      anim.layers.forEach((layer) => layer && layersToDraw.add(layer));
+    });
+    layersToDraw.forEach((layer) => layer.batchDraw());
   }
   static _animationLoop() {
     const Anim = Animation;
-    if (Anim.animations.length) {
+    if (Anim.animations.size) {
       Anim._runFrames();
       Util.requestAnimFrame(Anim._animationLoop);
     } else {
