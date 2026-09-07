@@ -64,7 +64,7 @@ export const HSL: Filter = function (imageData) {
     nPixels = data.length,
     v = 1,
     s = Math.pow(2, this.saturation()),
-    h = Math.abs(this.hue() + 360) % 360,
+    h = ((this.hue() % 360) + 360) % 360,
     l = this.luminance() * 127;
 
   // Basis for the technique used:

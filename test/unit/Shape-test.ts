@@ -13,6 +13,7 @@ import {
   loadImage,
   Konva,
   compareCanvases,
+  countCalls,
 } from './test-utils.ts';
 
 import { getOffsetY } from './Text-test.ts';
@@ -2574,5 +2575,14 @@ describe('Shape', function () {
     assert.equal(rect.hasShadow(), true);
     rect.shadowOffset({ x: 0, y: 0 });
     assert.equal(rect.hasShadow(), false);
+  });
+
+  it('deprecated setDashArray() sets the dash', function () {
+    var shape = new Konva.Rect();
+    var errors = countCalls(Konva.Util, 'error', () => {
+      assert.equal((shape as any).setDashArray([5, 5]), shape);
+    });
+    assert.equal(errors, 1);
+    assert.deepEqual(shape.dash(), [5, 5]);
   });
 });

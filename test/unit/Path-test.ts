@@ -2021,4 +2021,11 @@ describe('Path', function () {
     });
     assert.equal(calls, 0);
   });
+
+  it('width() and height() of a path are its bounds, like a line', function () {
+    var path = new Konva.Path({ data: 'M10 20 L60 20 L60 50' });
+    assert.equal(path.width(), 50);
+    assert.equal(path.height(), 30);
+    assert.deepEqual(path.size(), { width: 50, height: 30 });
+  });
 });

@@ -6038,4 +6038,15 @@ describe('Transformer', function () {
     assert.equal(tr.isTransforming(), false);
     assert.equal(other.getIntersection({ x: 400, y: 100 }), circle);
   });
+
+  it('deprecated aliases return what the new method returns', function () {
+    var tr = new Konva.Transformer();
+    var errors = countCalls(Konva.Util, 'error', () => {
+      assert.equal((tr as any).lineEnabled(false), tr);
+      assert.equal((tr as any).lineEnabled(), false);
+      assert.equal((tr as any).getLineEnabled(), false);
+    });
+    assert.equal(errors, 3);
+    assert.equal(tr.borderEnabled(), false);
+  });
 });

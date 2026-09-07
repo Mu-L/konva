@@ -1193,4 +1193,22 @@ describe('TextPath', function () {
     });
     assert.equal(textpath.pathLength, 200);
   });
+
+  it('kerningFunc is called once per pair of characters', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var pairs: string[] = [];
+    var textpath = new Konva.TextPath({
+      text: 'abc',
+      fontSize: 20,
+      data: 'M0 50 L200 50',
+      kerningFunc: function (left, right) {
+        pairs.push(left + right);
+        return 0;
+      },
+    });
+    layer.add(textpath);
+    stage.add(layer);
+    assert.deepEqual(pairs, ['ab', 'bc']);
+  });
 });

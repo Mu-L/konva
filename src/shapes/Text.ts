@@ -404,7 +404,7 @@ export class Text extends Shape<TextConfig> {
               y: translateY + lineTranslateY,
               lineIndex: n,
               column: li,
-              isLastInLine: lastLine,
+              isLastInLine: li === array.length - 1,
               width: letterWidth,
               context,
             });

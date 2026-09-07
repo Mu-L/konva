@@ -352,7 +352,7 @@ export class TextPath extends Shape<TextPathConfig> {
       );
 
       let kern = 0;
-      if (kerningFunc) {
+      if (kerningFunc && i > 0) {
         try {
           // getKerning is a user provided getter. Make sure it never breaks our logic
           kern = kerningFunc(chars[i - 1].char, char) * this.fontSize();

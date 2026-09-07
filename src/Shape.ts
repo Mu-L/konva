@@ -2050,7 +2050,7 @@ Factory.addGetterSetter(Shape, 'fillRule', undefined, getStringValidator());
 Factory.backCompat(Shape, {
   dashArray: 'dash',
   getDashArray: 'getDash',
-  setDashArray: 'getDash',
+  setDashArray: 'setDash',
 
   drawFunc: 'sceneFunc',
   getDrawFunc: 'getSceneFunc',

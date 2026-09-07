@@ -10,6 +10,7 @@ import { Konva } from './Global.ts';
 import type { Layer } from './Layer.ts';
 import type { Shape } from './Shape.ts';
 import type { Stage } from './Stage.ts';
+import type { Tween, TweenConfig } from './Tween.ts';
 import type { GetSet, IRect, Vector2d } from './types.ts';
 import { Transform, Util, type AnyString } from './Util.ts';
 import {
@@ -2846,7 +2847,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   skewX: GetSet<number, this>;
   skewY: GetSet<number, this>;
 
-  to: (params: AnimTo) => void;
+  to: (params: Omit<TweenConfig, 'node'>) => Tween;
 
   transformsEnabled: GetSet<string, this>;
 
@@ -2912,12 +2913,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     return no;
   }
-}
-
-interface AnimTo extends NodeConfig {
-  onFinish?: Function;
-  onUpdate?: Function;
-  duration?: number;
 }
 
 Node.prototype.nodeType = 'Node';

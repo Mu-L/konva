@@ -208,7 +208,6 @@ export const Factory = {
       const oldSetter = SET + Util._capitalize(oldMethodName);
 
       function deprecated(this: Node) {
-        method.apply(this, arguments);
         Util.error(
           '"' +
             oldMethodName +
@@ -216,6 +215,7 @@ export const Factory = {
             newMethodName +
             '" instead.'
         );
+        return method.apply(this, arguments);
       }
 
       constructor.prototype[oldMethodName] = deprecated;

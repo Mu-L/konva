@@ -313,8 +313,9 @@ export class Tween {
 
     if (Util._isArray(end)) {
       diff = [];
-      // an attribute the node does not have yet starts from zeros
-      start = start || [];
+      // an attribute the node does not have yet starts from zeros. A copy,
+      // as the colour stops are replaced by RGBA objects below
+      start = (start || []).slice();
       len = Math.max(end.length, start.length);
 
       if (key === 'points' && end.length !== start.length) {
@@ -584,6 +585,7 @@ export class Tween {
  *
  * @method Konva.Node#to
  * @param {Object} [params] tween params
+ * @returns {Konva.Tween}
  * @example
  *
  * circle.to({
@@ -607,6 +609,7 @@ Node.prototype.to = function (params) {
     },
   } as any);
   tween.play();
+  return tween;
 };
 
 /*

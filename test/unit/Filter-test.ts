@@ -456,4 +456,18 @@ describe('Filter', function () {
     assert.equal(rect.blue(), 11);
     assert.equal(rect._filterUpToDate, false);
   });
+
+  it('HSL and HSV hue wraps around below -360 and above 360', function () {
+    [Konva.Filters.HSL, Konva.Filters.HSV].forEach((filter) => {
+      var results = [-400, -40, 320, 680].map((hue) => {
+        var rect = new Konva.Rect({ width: 4, height: 4, fill: '#8040c0' });
+        rect.cache();
+        rect.filters([filter]);
+        rect.hue(hue);
+        var canvas = rect._getCachedSceneCanvas();
+        return Array.from(canvas.getContext().getImageData(1, 1, 1, 1).data);
+      });
+      results.forEach((pixel) => assert.deepEqual(pixel, results[0]));
+    });
+  });
 });

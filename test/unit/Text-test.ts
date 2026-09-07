@@ -2230,4 +2230,24 @@ describe('Text', function () {
     text.fontSize(30);
     assert.equal(text.relayouts, 2);
   });
+
+  it('charRenderFunc isLastInLine is true for the last character of every line', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var last: string[] = [];
+    var text = new Konva.Text({
+      text: 'ab cd',
+      width: 30,
+      fontSize: 20,
+      charRenderFunc: (props) => {
+        if (props.isLastInLine) {
+          last.push(props.char);
+        }
+      },
+    });
+    layer.add(text);
+    stage.add(layer);
+    assert.equal(text.textArr.length, 2);
+    assert.deepEqual(last, ['b', 'd']);
+  });
 });

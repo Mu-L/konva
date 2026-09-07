@@ -126,6 +126,12 @@ export class Path extends Shape<PathConfig> {
       context.fillStrokeShape(this);
     }
   }
+  getWidth() {
+    return this.getSelfRect().width;
+  }
+  getHeight() {
+    return this.getSelfRect().height;
+  }
   getSelfRect() {
     let points: Array<number> = [];
     this.dataArray.forEach(function (data) {

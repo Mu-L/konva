@@ -624,4 +624,69 @@ describe('Tween', function () {
     assert.equal((params as any).node, undefined);
     circle2.to(params);
   });
+
+  it('onReset is called with the tween as this, like onFinish and onUpdate', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 10, fill: 'red' });
+    layer.add(circle);
+    stage.add(layer);
+
+    var receivers: any[] = [];
+    var tween = new Konva.Tween({
+      node: circle,
+      duration: 1,
+      x: 100,
+      onReset: function () {
+        receivers.push(this);
+      },
+    });
+    tween.seek(0.5);
+    tween.reset();
+    assert.equal(receivers.length, 1);
+    assert.equal(receivers[0], tween);
+    tween.destroy();
+  });
+
+  it('tweening a gradient does not modify the color stops of the node', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var stops = [0, 'red', 1, 'blue'];
+    var rect = new Konva.Rect({
+      width: 50,
+      height: 50,
+      fillLinearGradientStartPoint: { x: 0, y: 0 },
+      fillLinearGradientEndPoint: { x: 50, y: 0 },
+      fillLinearGradientColorStops: stops,
+    });
+    layer.add(rect);
+    stage.add(layer);
+
+    var tween = new Konva.Tween({
+      node: rect,
+      duration: 1,
+      fillLinearGradientColorStops: [0, 'green', 1, 'yellow'],
+    });
+    tween.seek(0.5);
+    assert.deepEqual(stops, [0, 'red', 1, 'blue']);
+    tween.destroy();
+  });
+
+  it('node.to() returns the tween', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 10, fill: 'red' });
+    layer.add(circle);
+    stage.add(layer);
+
+    var tween = circle.to({
+      x: 100,
+      duration: 1,
+      easing: Konva.Easings.EaseIn,
+      yoyo: false,
+    });
+    assert.instanceOf(tween, Konva.Tween);
+    tween.finish();
+    assert.equal(circle.x(), 100);
+  });
 });

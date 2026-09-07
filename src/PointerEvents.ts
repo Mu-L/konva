@@ -67,7 +67,8 @@ export function releaseCapturesOf(node: Node) {
 export function releaseCapture(pointerId: number, target?: Shape | Stage) {
   const shape = Captures.get(pointerId);
 
-  if (!shape) return;
+  // a node can only release its own capture
+  if (!shape || (target && shape !== target)) return;
 
   const stage = shape.getStage();
 

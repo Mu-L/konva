@@ -432,11 +432,11 @@ describe('Util', function () {
     });
   });
 
-  it('colorToRGBA() - named color transparent keeps its alpha', function () {
+  it('colorToRGBA() - named color transparent is transparent black, so a fade to it does not pass through white', function () {
     assert.deepEqual(Konva.Util.colorToRGBA('transparent'), {
-      r: 255,
-      g: 255,
-      b: 255,
+      r: 0,
+      g: 0,
+      b: 0,
       a: 0,
     });
 

@@ -20,7 +20,7 @@ export const HSV: Filter = function (imageData) {
     nPixels = data.length,
     v = Math.pow(2, this.value()),
     s = Math.pow(2, this.saturation()),
-    h = Math.abs(this.hue() + 360) % 360;
+    h = ((this.hue() % 360) + 360) % 360;
 
   // Basis for the technique used:
   // http://beesbuzz.biz/code/hsv_color_transforms.php
