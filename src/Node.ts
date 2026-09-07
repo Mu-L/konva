@@ -1417,20 +1417,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * node.getAbsolutePosition(stage)
    */
   getAbsolutePosition(top?: Node) {
-    let haveCachedParent = false;
-    let parent = this.parent;
-    while (parent) {
-      if (parent.isCached()) {
-        haveCachedParent = true;
-        break;
-      }
-      parent = parent.parent;
-    }
-    if (haveCachedParent && !top) {
-      // make fake top element
-      // "true" is not a node, but it will just allow skip all caching
-      top = true as any;
-    }
     const absoluteMatrix = this.getAbsoluteTransform(top).getMatrix(),
       absoluteTransform = new Transform(),
       offset = this.offset();
@@ -1535,32 +1521,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     this.setPosition({ x: x, y: y });
     return this;
-  }
-  _eachAncestorReverse(func, top) {
-    let family: Array<Node> = [],
-      parent = this.getParent(),
-      len,
-      n;
-
-    // if top node is defined, and this node is top node,
-    // there's no need to build a family tree.  just execute
-    // func with this because it will be the only node
-    if (top && top._id === this._id) {
-      // func(this);
-      return;
-    }
-
-    family.unshift(this);
-
-    while (parent && (!top || parent._id !== top._id)) {
-      family.unshift(parent);
-      parent = parent.parent;
-    }
-
-    len = family.length;
-    for (n = 0; n < len; n++) {
-      func(family[n]);
-    }
   }
   /**
    * rotate node by an amount in degrees relative to its current rotation
@@ -1927,7 +1887,8 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * // fire click event that bubbles
    * node.fire('click', null, true);
    */
-  fire(eventType: string, evt: any = {}, bubble?: boolean) {
+  fire(eventType: string, evt?: any, bubble?: boolean) {
+    evt = evt || {};
     evt.target = evt.target || this;
     // bubble
     if (bubble) {
@@ -1946,57 +1907,66 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @returns {Konva.Transform}
    */
   getAbsoluteTransform(top?: Node | null) {
-    // if using an argument, we can't cache the result.
-    if (top) {
+    // relative to an ancestor, or under a cached one, the result can't come
+    // from the cache: a cached container keeps the transform caches of its
+    // descendants while it moves (see Container._clearSelfAndDescendantCache)
+    if (top || this._hasCachedAncestor()) {
       return this._getAbsoluteTransform(top);
-    } else {
-      // if no argument, we can cache the result
-      return this._getCache(
-        ABSOLUTE_TRANSFORM,
-        this._getAbsoluteTransform
-      ) as Transform;
     }
+    return this._getCache(
+      ABSOLUTE_TRANSFORM,
+      this._getCachedAbsoluteTransform
+    ) as Transform;
   }
-  _getAbsoluteTransform(top?: Node) {
-    let at: Transform;
-    // we we need position relative to an ancestor, we will iterate for all
-    if (top) {
-      at = new Transform();
-      // start with stage and traverse downwards to self
-      this._eachAncestorReverse(function (node: Node) {
-        const transformsEnabled = node.transformsEnabled();
-
-        if (transformsEnabled === 'all') {
-          at.multiply(node.getTransform());
-        } else if (transformsEnabled === 'position') {
-          at.translate(node.x() - node.offsetX(), node.y() - node.offsetY());
-        }
-      }, top);
-      return at;
-    } else {
-      // try to use a cached value
-      at = this._cache[ABSOLUTE_TRANSFORM] || new Transform();
-      if (this.parent) {
-        // transform will be cached
-        this.parent.getAbsoluteTransform().copyInto(at);
-      } else {
-        at.reset();
+  _hasCachedAncestor() {
+    let parent = this.parent;
+    while (parent) {
+      if (parent.isCached()) {
+        return true;
       }
-      const transformsEnabled = this.transformsEnabled();
-      if (transformsEnabled === 'all') {
-        at.multiply(this.getTransform());
-      } else if (transformsEnabled === 'position') {
-        // use "attrs" directly, because it is a bit faster
-        const x = this.attrs.x || 0;
-        const y = this.attrs.y || 0;
-        const offsetX = this.attrs.offsetX || 0;
-        const offsetY = this.attrs.offsetY || 0;
-
-        at.translate(x - offsetX, y - offsetY);
-      }
-      at.dirty = false;
+      parent = parent.parent;
+    }
+    return false;
+  }
+  // relative to `top`: the transforms of `top` and of its ancestors are
+  // left out. Goes through the parent, so an ancestor that redefines its
+  // absolute transform (Konva.Transformer) is honoured
+  _getAbsoluteTransform(top?: Node | null) {
+    const at = new Transform();
+    if (this === top) {
       return at;
     }
+    if (this.parent && this.parent !== top) {
+      this.parent.getAbsoluteTransform(top).copyInto(at);
+    }
+    return this._multiplyOwnTransform(at);
+  }
+  // the cached transform of the parent, then the own one
+  _getCachedAbsoluteTransform() {
+    const at: Transform = this._cache[ABSOLUTE_TRANSFORM] || new Transform();
+    if (this.parent) {
+      this.parent.getAbsoluteTransform().copyInto(at);
+    } else {
+      at.reset();
+    }
+    this._multiplyOwnTransform(at);
+    at.dirty = false;
+    return at;
+  }
+  _multiplyOwnTransform(at: Transform) {
+    const transformsEnabled = this.transformsEnabled();
+    if (transformsEnabled === 'all') {
+      at.multiply(this.getTransform());
+    } else if (transformsEnabled === 'position') {
+      // use "attrs" directly, because it is a bit faster
+      const x = this.attrs.x || 0;
+      const y = this.attrs.y || 0;
+      const offsetX = this.attrs.offsetX || 0;
+      const offsetY = this.attrs.offsetY || 0;
+
+      at.translate(x - offsetX, y - offsetY);
+    }
+    return at;
   }
   /**
    * get absolute scale of the node which takes into

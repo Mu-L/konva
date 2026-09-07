@@ -998,7 +998,6 @@ describe('Node', function () {
             skewY: -2,
             easing: 'ease-in-out'
 
-
         })
         */
   });
@@ -4014,4 +4013,80 @@ describe('Node', function () {
     var shape = new MyShape({ fooX: 1, fooY: 2 });
     assert.deepEqual(shape['foo'](), { x: 1, y: 2 });
   });
+
+  it('fire() with a null event bubbles', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect();
+    layer.add(rect);
+
+    var target;
+    layer.on('custom', function (e) {
+      target = e.target;
+    });
+    rect.fire('custom', null, true);
+    assert.equal(target, rect);
+  });
+
+  it('absolute getters are fresh inside a cached parent', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var group = new Konva.Group({ x: 10, y: 10 });
+    layer.add(group);
+    var rect = new Konva.Rect({
+      x: 20,
+      y: 20,
+      width: 50,
+      height: 50,
+      fill: 'red',
+    });
+    group.add(rect);
+    layer.draw();
+    // prime the caches
+    rect.getAbsoluteTransform();
+    rect.getAbsoluteScale();
+
+    group.cache();
+    group.scale({ x: 2, y: 2 });
+    group.rotation(90);
+    assert.deepEqual(rect.getAbsoluteScale(), { x: 2, y: 2 });
+    assert.equal(Math.round(rect.getAbsoluteRotation()), 90);
+
+    group.rotation(0);
+    group.x(50);
+    simulateMouseMove(stage, { x: 90, y: 50 });
+    var pos = rect.getRelativePointerPosition()!;
+    assert.equal(Math.round(pos.x), 0);
+    assert.equal(Math.round(pos.y), 0);
+  });
+
+  it('descendants of a cached group follow its visibility, listening, opacity and stage', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var group = new Konva.Group();
+    layer.add(group);
+    var rect = new Konva.Rect({ width: 50, height: 50, fill: 'red' });
+    group.add(rect);
+    layer.draw();
+    group.cache();
+    // prime the caches
+    assert.equal(rect.isVisible(), true);
+    assert.equal(rect.isListening(), true);
+    assert.equal(rect.getAbsoluteOpacity(), 1);
+    assert.equal(rect.getStage(), stage);
+
+    group.visible(false);
+    assert.equal(rect.isVisible(), false);
+    group.listening(false);
+    assert.equal(rect.isListening(), false);
+    group.opacity(0.5);
+    assert.equal(rect.getAbsoluteOpacity(), 0.5);
+    group.remove();
+    assert.equal(rect.getStage(), null);
+    assert.equal(rect.getLayer(), null);
+  });
+
 });

@@ -2762,4 +2762,20 @@ describe('Container', function () {
     });
     assert.equal(calls, 0);
   });
+
+  it('getClientRect skips a child with a non-finite rect', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var group = new Konva.Group();
+    layer.add(group);
+    group.add(new Konva.Rect({ x: 10, y: 10, width: 50, height: 50 }));
+    var bad = new Konva.Shape({ sceneFunc: function () {} });
+    bad.getSelfRect = () => ({ x: NaN, y: 0, width: 10, height: 10 });
+    group.add(bad);
+
+    var expected = { x: 10, y: 10, width: 50, height: 50 };
+    assert.deepEqual(group.getClientRect(), expected);
+    assert.deepEqual(layer.getClientRect(), expected);
+  });
 });

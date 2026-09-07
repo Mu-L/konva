@@ -327,8 +327,10 @@ export abstract class Container<
     if (isAbsTransform) Node._absTransformCascadeDepth++;
     try {
       super._clearSelfAndDescendantCache(attr);
-      // skip clearing if node is cached with canvas (perf)
-      if (this.isCached()) return;
+      // a cached container is drawn from its bitmap, so its descendants keep
+      // their transform caches while it moves (perf); Node.getAbsoluteTransform
+      // skips those caches under a cached ancestor
+      if (isAbsTransform && this.isCached()) return;
       this.children?.forEach(function (node) {
         node._clearSelfAndDescendantCache(attr);
       });
@@ -475,8 +477,12 @@ export abstract class Container<
         skipStroke: config.skipStroke,
       });
 
-      // skip invisible children (like empty groups)
-      if (rect.width === 0 && rect.height === 0) {
+      // skip invisible children (like empty groups) and a child whose rect
+      // would poison the whole box
+      if (
+        (rect.width === 0 && rect.height === 0) ||
+        !isFinite(rect.x + rect.y + rect.width + rect.height)
+      ) {
         return;
       }
 

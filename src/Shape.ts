@@ -527,22 +527,8 @@ export class Shape<
     };
   }
   getClientRect(config: ShapeGetClientRectConfig = {}) {
-    // if we have a cached parent, it will use cached transform matrix
-    // but we don't want to that
-    let hasCachedParent = false;
-    let parent = this.getParent();
-    while (parent) {
-      if (parent.isCached()) {
-        hasCachedParent = true;
-        break;
-      }
-      parent = parent.getParent();
-    }
     const skipTransform = config.skipTransform;
-
-    // force relative to stage if we have a cached parent
-    const relativeTo =
-      config.relativeTo || (hasCachedParent && this.getStage()) || undefined;
+    const relativeTo = config.relativeTo;
 
     const fillRect = this.getSelfRect();
 
