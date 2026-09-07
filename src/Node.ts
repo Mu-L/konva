@@ -491,17 +491,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     x -= offset;
     y -= offset;
 
-    // if (Math.floor(x) < x) {
-    //   x = Math.floor(x);
-    //   // width += 1;
-    // }
-    // if (Math.floor(y) < y) {
-    //   y = Math.floor(y);
-    //   // height += 1;
-    // }
-
-    // console.log({ x, y, width, height }, rect);
-
     const cachedSceneCanvas = new SceneCanvas({
         pixelRatio: pixelRatio,
         width: width,
@@ -679,10 +668,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     const trans = this.getAbsoluteTransform(top);
     points.forEach(function (point) {
       const transformed = trans.point(point);
-      if (minX === undefined) {
-        minX = maxX = transformed.x;
-        minY = maxY = transformed.y;
-      }
       minX = Math.min(minX, transformed.x);
       minY = Math.min(minY, transformed.y);
       maxX = Math.max(maxX, transformed.x);
@@ -749,13 +734,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
 
     let useNativeOnly = true;
     for (let i = 0; i < filters.length; i++) {
-      const fallbackRequired =
-        typeof filters[i] === 'string' && !isCSSFiltersSupported();
-      if (fallbackRequired) {
-        // Util.warn(
-        //   `CSS filter "${filters[i]}" is not supported in native mode.`
-        // );
-      }
       if (typeof filters[i] !== 'string' || !isCSSFiltersSupported()) {
         useNativeOnly = false;
         break;
@@ -1444,8 +1422,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     for (key in trans) {
       this.attrs[key] = trans[key];
     }
-    // this._clearCache(TRANSFORM);
-    // this._clearSelfAndDescendantCache(ABSOLUTE_TRANSFORM);
   }
   _clearTransform() {
     const trans = {
@@ -1992,14 +1968,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * var rotation = node.getAbsoluteRotation();
    */
   getAbsoluteRotation() {
-    // var parent: Node = this;
-    // var rotation = 0;
-
-    // while (parent) {
-    //   rotation += parent.rotation();
-    //   parent = parent.getParent();
-    // }
-    // return rotation;
     return this.getAbsoluteTransform().decompose().rotation;
   }
   /**
@@ -2657,8 +2625,6 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
   }
 
   _setDragPosition(evt, elem) {
-    // const pointers = this.getStage().getPointersPositions();
-    // const pos = pointers.find(p => p.id === this._dragEventId);
     const pos = this.getStage()!._getPointerById(elem.pointerId);
 
     if (!pos) {

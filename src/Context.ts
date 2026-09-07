@@ -908,37 +908,35 @@ export class SceneContext extends Context {
       // ignore strokeScaleEnabled for Text
       strokeScaleEnabled = shape.getStrokeScaleEnabled();
 
-    if (shape.hasStroke()) {
-      if (!strokeScaleEnabled) {
-        this.save();
-        const pixelRatio = this.getCanvas().getPixelRatio();
-        this.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      }
+    if (!strokeScaleEnabled) {
+      this.save();
+      const pixelRatio = this.getCanvas().getPixelRatio();
+      this.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
 
-      this._applyLineCap(shape);
-      if (dash && shape.dashEnabled()) {
-        this.setLineDash(dash);
-        this.setAttr('lineDashOffset', shape.dashOffset());
-      }
+    this._applyLineCap(shape);
+    if (dash && shape.dashEnabled()) {
+      this.setLineDash(dash);
+      this.setAttr('lineDashOffset', shape.dashOffset());
+    }
 
-      this.setAttr('lineWidth', shape.strokeWidth());
+    this.setAttr('lineWidth', shape.strokeWidth());
 
-      if (!shape.getShadowForStrokeEnabled()) {
-        this.setAttr('shadowColor', 'rgba(0,0,0,0)');
-      }
+    if (!shape.getShadowForStrokeEnabled()) {
+      this.setAttr('shadowColor', 'rgba(0,0,0,0)');
+    }
 
-      const hasLinearGradient = shape.getStrokeLinearGradientColorStops();
-      if (hasLinearGradient) {
-        this._strokeLinearGradient(shape);
-      } else {
-        this.setAttr('strokeStyle', shape.stroke());
-      }
+    const hasLinearGradient = shape.getStrokeLinearGradientColorStops();
+    if (hasLinearGradient) {
+      this._strokeLinearGradient(shape);
+    } else {
+      this.setAttr('strokeStyle', shape.stroke());
+    }
 
-      shape._strokeFunc(this);
+    shape._strokeFunc(this);
 
-      if (!strokeScaleEnabled) {
-        this.restore();
-      }
+    if (!strokeScaleEnabled) {
+      this.restore();
     }
   }
   _applyShadow(shape) {
@@ -982,26 +980,24 @@ export class HitContext extends Context {
     }
   }
   _stroke(shape) {
-    if (shape.hasHitStroke()) {
-      // ignore strokeScaleEnabled for Text
-      const strokeScaleEnabled = shape.getStrokeScaleEnabled();
-      if (!strokeScaleEnabled) {
-        this.save();
-        const pixelRatio = this.getCanvas().getPixelRatio();
-        this.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      }
-      this._applyLineCap(shape);
+    // ignore strokeScaleEnabled for Text
+    const strokeScaleEnabled = shape.getStrokeScaleEnabled();
+    if (!strokeScaleEnabled) {
+      this.save();
+      const pixelRatio = this.getCanvas().getPixelRatio();
+      this.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
+    this._applyLineCap(shape);
 
-      const hitStrokeWidth = shape.hitStrokeWidth();
-      const strokeWidth =
-        hitStrokeWidth === 'auto' ? shape.strokeWidth() : hitStrokeWidth;
+    const hitStrokeWidth = shape.hitStrokeWidth();
+    const strokeWidth =
+      hitStrokeWidth === 'auto' ? shape.strokeWidth() : hitStrokeWidth;
 
-      this.setAttr('lineWidth', strokeWidth);
-      this.setAttr('strokeStyle', shape.colorKey);
-      shape._strokeFuncHit(this);
-      if (!strokeScaleEnabled) {
-        this.restore();
-      }
+    this.setAttr('lineWidth', strokeWidth);
+    this.setAttr('strokeStyle', shape.colorKey);
+    shape._strokeFuncHit(this);
+    if (!strokeScaleEnabled) {
+      this.restore();
     }
   }
 }

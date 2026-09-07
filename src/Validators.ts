@@ -1,5 +1,5 @@
 import { Konva } from './Global.ts';
-import { Util } from './Util.ts';
+import { TypedArray, Util } from './Util.ts';
 
 function _formatValue(val: any) {
   if (Util._isString(val)) {
@@ -21,16 +21,6 @@ export function RGBComponent(val: number) {
     return 0;
   }
   return Math.round(val);
-}
-export function alphaComponent(val: number) {
-  if (val > 1) {
-    return 1;
-  } else if (val < 0.0001) {
-    // chrome does not honor alpha values of 0
-    return 0.0001;
-  }
-
-  return val;
 }
 
 export function getNumberValidator<T>() {
@@ -123,25 +113,6 @@ export function getStringOrGradientValidator<T>() {
     };
   }
 }
-
-export function getFunctionValidator<T>() {
-  if (Konva.isUnminified) {
-    return function (val: T, attr: string): T {
-      if (!Util._isFunction(val)) {
-        Util.warn(
-          _formatValue(val) +
-            ' is a not valid value for "' +
-            attr +
-            '" attribute. The value should be a function.'
-        );
-      }
-      return val;
-    };
-  }
-}
-// the common ancestor of every typed array
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray#description
-const TypedArray = Object.getPrototypeOf(Int8Array);
 
 export function getNumberArrayValidator<T>() {
   if (Konva.isUnminified) {

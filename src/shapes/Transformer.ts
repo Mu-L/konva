@@ -527,10 +527,6 @@ export class Transformer extends Group {
       maxY: number = -Infinity;
     totalPoints.forEach(function (point) {
       const transformed = tr.point(point);
-      if (minX === undefined) {
-        minX = maxX = transformed.x;
-        minY = maxY = transformed.y;
-      }
       minX = Math.min(minX, transformed.x);
       minY = Math.min(minY, transformed.y);
       maxX = Math.max(maxX, transformed.x);

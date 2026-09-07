@@ -581,7 +581,6 @@ export class Shape<
       hasShadow = this.hasShadow();
     let stage;
 
-    const skipBuffer = false;
     const cachingSelf = top === this;
 
     if (!this.isVisible() && !cachingSelf) {
@@ -604,7 +603,7 @@ export class Shape<
 
     context.save();
     // if buffer canvas is needed
-    if (this._useBufferCanvas() && !skipBuffer) {
+    if (this._useBufferCanvas()) {
       stage = this.getStage();
       const bc = bufferCanvas || stage._syncBufferSize(stage.bufferCanvas);
       const bufferContext = bc.getContext();
@@ -632,12 +631,6 @@ export class Shape<
       // layer might be undefined if we are using cache before adding to layer
       const o = this.getAbsoluteTransform(top).getMatrix();
       bufferContext.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
-
-      // Apply CSS filters to buffer context if not cached
-      // we skip filters in non cache use cases for now
-      // if (!cachingSelf && filters?.length > 0) {
-      //   bufferContext._applyCSSFilters(this);
-      // }
 
       drawFunc.call(this, bufferContext, this);
       bufferContext.restore();
@@ -670,11 +663,6 @@ export class Shape<
         context.transform(o[0], o[1], o[2], o[3], o[4], o[5]);
         context._applyOpacity(this);
         context._applyGlobalCompositeOperation(this);
-
-        // Apply CSS filters to main context if not cached
-        // if (filters?.length) {
-        //   context._applyCSSFilters(this);
-        // }
       }
 
       if (hasShadow) {

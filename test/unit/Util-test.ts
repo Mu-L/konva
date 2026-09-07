@@ -523,4 +523,29 @@ describe('Util', function () {
     });
     assert.isTrue(Array.isArray(Konva.Util._prepareToStringify(o).list));
   });
+
+  it('cloneObject() copies typed arrays and arrays of objects', function () {
+    var source = {
+      typed: new Float32Array([1, 2]),
+      list: [{ x: 1 }, [2, 3]],
+      plain: { deep: [1] },
+    };
+    var copy = Konva.Util.cloneObject(source);
+
+    assert.deepEqual(copy, source);
+    assert.notEqual(copy.typed, source.typed);
+    assert.instanceOf(copy.typed, Float32Array);
+    assert.notEqual(copy.list, source.list);
+    assert.notEqual(copy.list[0], source.list[0]);
+    assert.notEqual(copy.list[1], source.list[1]);
+    assert.notEqual(copy.plain.deep, source.plain.deep);
+  });
+
+  it('cloneObject() keeps the length of a sparse array', function () {
+    var sparse = [1, , 3, ,];
+    var copy = Konva.Util.cloneObject({ sparse: sparse }).sparse;
+    assert.equal(copy.length, 4);
+    assert.equal(copy[0], 1);
+    assert.equal(1 in copy, false);
+  });
 });

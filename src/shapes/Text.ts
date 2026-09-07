@@ -115,8 +115,9 @@ function hasShadowOpacityBug(): boolean {
     return _shadowOpacityBuggy;
   }
   _shadowOpacityBuggy = false;
+  let c;
   try {
-    const c = document.createElement('canvas');
+    c = Util.createCanvasElement();
     c.width = 10;
     c.height = 10;
     const ctx = c.getContext(CONTEXT_2D);
@@ -139,6 +140,10 @@ function hasShadowOpacityBug(): boolean {
     }
   } catch (e) {
     // no-op (SSR or restricted canvas)
+  } finally {
+    if (c) {
+      Util.releaseCanvas(c);
+    }
   }
   return _shadowOpacityBuggy;
 }

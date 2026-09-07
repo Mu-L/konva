@@ -998,6 +998,7 @@ describe('Node', function () {
             skewY: -2,
             easing: 'ease-in-out'
 
+
         })
         */
   });
@@ -4089,4 +4090,13 @@ describe('Node', function () {
     assert.equal(rect.getLayer(), null);
   });
 
+  it('clone() does not share nested attribute arrays with the original', function () {
+    var rect = new Konva.Rect({ width: 10, height: 10 });
+    rect.setAttr('stops', [{ offset: 0 }]);
+
+    var clone = rect.clone();
+    clone.getAttr('stops')[0].offset = 1;
+
+    assert.equal(rect.getAttr('stops')[0].offset, 0);
+  });
 });

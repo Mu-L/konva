@@ -466,6 +466,10 @@ const requestFrame = (win: any, f: Function) => {
 };
 const capitalizeCache = new Map<string, string>();
 
+// the common ancestor of every typed array
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray#description
+export const TypedArray = Object.getPrototypeOf(Int8Array);
+
 // Split the components of rgb()/hsl(). CSS separates them with commas (legacy
 // syntax), or with spaces and a slash before the alpha (CSS Color 4 syntax),
 // but never with both. Keep the two apart, so that a space inside a
@@ -929,18 +933,26 @@ export const Util = {
       r2.y + r2.height < r1.y
     );
   },
+  // a deep copy of plain objects and arrays; class instances and elements
+  // are shared, typed arrays are copied
   cloneObject<Any>(obj: Any): Any {
-    const retObj: any = {};
+    const copy: any = {};
     for (const key in obj) {
-      if (this._isPlainObject(obj[key])) {
-        retObj[key] = this.cloneObject(obj[key]);
-      } else if (this._isArray(obj[key])) {
-        retObj[key] = this.cloneArray(obj[key] as Array<any>);
-      } else {
-        retObj[key] = obj[key];
-      }
+      copy[key] = Util._cloneValue(obj[key]);
     }
-    return retObj;
+    return copy;
+  },
+  _cloneValue(val: any) {
+    if (Util._isArray(val)) {
+      // a flat array (points) is sliced, an array holding objects copied deep
+      return val.some((item) => typeof item === 'object')
+        ? val.map(Util._cloneValue)
+        : val.slice();
+    }
+    if (Util._isPlainObject(val)) {
+      return Util.cloneObject(val);
+    }
+    return val instanceof TypedArray ? val.slice() : val;
   },
   cloneArray(arr: Array<any>) {
     return arr.slice(0);
@@ -950,18 +962,6 @@ export const Util = {
   },
   radToDeg(rad: number) {
     return rad * DEG180_OVER_PI;
-  },
-  _degToRad(deg: number) {
-    Util.warn(
-      'Util._degToRad is removed. Please use public Util.degToRad instead.'
-    );
-    return Util.degToRad(deg);
-  },
-  _radToDeg(rad: number) {
-    Util.warn(
-      'Util._radToDeg is removed. Please use public Util.radToDeg instead.'
-    );
-    return Util.radToDeg(rad);
   },
   _getRotation(radians: number) {
     return Konva.angleDeg ? Util.radToDeg(radians) : radians;
