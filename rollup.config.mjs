@@ -2,8 +2,7 @@
 import typescript from 'rollup-plugin-typescript2';
 
 export default {
-  // the UMD bundle has the default export only, so window.Konva is the object
-  input: `src/umd.ts`,
+  input: `src/index.ts`,
   output: [
     {
       file: 'konva.js',
