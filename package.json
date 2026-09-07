@@ -48,7 +48,7 @@
     "test:node:canvas": "mocha -r tsx -r ./test/node-canvas-global-setup.mjs --extension ts --recursive './test/unit/' --exit",
     "test:node:skia": "mocha -r tsx -r ./test/node-skia-global-setup.mjs --extension ts --recursive './test/unit/' --exit",
     "test:node": "npm run test:node:canvas && npm run test:node:skia",
-    "tsc": "tsc --removeComments",
+    "tsc": "tsc",
     "rollup": "rollup -c",
     "clean": "rimraf ./lib && rimraf ./types && rimraf ./cmj && rimraf ./test-build",
     "watch": "rollup -c -w",
