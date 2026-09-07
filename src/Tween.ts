@@ -162,7 +162,7 @@ class TweenEngine {
     this.fire('onPause');
   }
   getTimer() {
-    return new Date().getTime();
+    return Date.now();
   }
 }
 
@@ -288,6 +288,14 @@ export class Tween {
     this.onUpdate = config.onUpdate;
   }
   _addAttr(key, end) {
+    // a component attribute ({x, y} of scale, offset, a gradient point...)
+    // is tweened through its components: scale -> scaleX, scaleY
+    if (Util._isPlainObject(end)) {
+      for (const component in end) {
+        this._addAttr(key + Util._capitalize(component), end[component]);
+      }
+      return;
+    }
     const node = this.node,
       nodeId = node._id;
     let diff, len, trueEnd, trueStart, endRGBA;
@@ -304,6 +312,8 @@ export class Tween {
 
     if (Util._isArray(end)) {
       diff = [];
+      // an attribute the node does not have yet starts from zeros
+      start = start || [];
       len = Math.max(end.length, start.length);
 
       if (key === 'points' && end.length !== start.length) {
@@ -327,7 +337,7 @@ export class Tween {
       if (key.indexOf('fill') === 0) {
         for (let n = 0; n < len; n++) {
           if (n % 2 === 0) {
-            diff.push(end[n] - start[n]);
+            diff.push(end[n] - (start[n] || 0));
           } else {
             const startRGBA = colorToRGBA(start[n]);
             endRGBA = colorToRGBA(end[n]);
@@ -342,7 +352,7 @@ export class Tween {
         }
       } else {
         for (let n = 0; n < len; n++) {
-          diff.push(end[n] - start[n]);
+          diff.push(end[n] - (start[n] || 0));
         }
       }
     } else if (colorAttrs.indexOf(key) !== -1) {
@@ -584,14 +594,17 @@ export class Tween {
  */
 Node.prototype.to = function (params) {
   const onFinish = params.onFinish;
-  params.node = this;
-  params.onFinish = function () {
-    this.destroy();
-    if (onFinish) {
-      onFinish();
-    }
-  };
-  const tween = new Tween(params as any);
+  // params stay untouched, so the same object can animate several nodes
+  const tween = new Tween({
+    ...params,
+    node: this,
+    onFinish() {
+      tween.destroy();
+      if (onFinish) {
+        onFinish();
+      }
+    },
+  } as any);
   tween.play();
 };
 

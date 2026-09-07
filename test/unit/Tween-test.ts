@@ -554,4 +554,74 @@ describe('Tween', function () {
     tween.seek(0.5);
     tween.destroy();
   });
+
+  it('tweening a component attribute animates its components', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    var tween = new Konva.Tween({
+      node: circle,
+      duration: 1,
+      scale: { x: 3, y: 5 },
+      offset: { x: 10, y: 20 },
+    });
+    tween.seek(0.5);
+    assert.equal(circle.scaleX(), 2);
+    assert.equal(circle.scaleY(), 3);
+    assert.equal(circle.offsetX(), 5);
+    assert.equal(circle.offsetY(), 10);
+    tween.finish();
+    assert.deepEqual(circle.scale(), { x: 3, y: 5 });
+    assert.deepEqual(
+      Object.keys(circle.attrs).filter((key) => /^(scale|offset)\d/.test(key)),
+      []
+    );
+    tween.destroy();
+  });
+
+  it('tweening an array attribute the node does not have yet starts from zeros', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle);
+
+    var tween = new Konva.Tween({
+      node: circle,
+      duration: 1,
+      weights: [10, 20],
+    } as any);
+    tween.seek(0.5);
+    assert.deepEqual(circle.getAttr('weights'), [5, 10]);
+    tween.destroy();
+  });
+
+  it('to() does not mutate its params, so they can be reused', function (done) {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle1 = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    var circle2 = new Konva.Circle({ x: 50, y: 50, radius: 20 });
+    layer.add(circle1, circle2);
+
+    var finished = 0;
+    var params = {
+      x: 100,
+      duration: 0.01,
+      onFinish: function () {
+        finished += 1;
+        if (finished === 2) {
+          assert.equal(circle1.x(), 100);
+          assert.equal(circle2.x(), 100);
+          done();
+        }
+      },
+    };
+    circle1.to(params);
+    assert.equal((params as any).node, undefined);
+    circle2.to(params);
+  });
 });
