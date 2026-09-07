@@ -262,4 +262,26 @@ describe('RegularPolygon', function () {
       'clearRect(0,0,578,200);save();transform(1,0,0,1,100,100);beginPath();moveTo(26.18,80.979);arcTo(0,100,-26.18,80.979,32.361);lineTo(-68.925,49.923);arcTo(-95.106,30.902,-85.106,0.125,32.361);lineTo(-68.779,-50.125);arcTo(-58.779,-80.902,-26.418,-80.902,32.361);lineTo(26.418,-80.902);arcTo(58.779,-80.902,68.779,-50.125,32.361);lineTo(85.106,0.125);arcTo(95.106,30.902,68.925,49.923,32.361);closePath();fillStyle=black;fill();restore();clearRect(0,0,578,200);save();transform(1,0,0,1,100,100);beginPath();moveTo(26.18,80.979);arcTo(0,100,-26.18,80.979,32.361);lineTo(-68.925,49.923);arcTo(-95.106,30.902,-85.106,0.125,32.361);lineTo(-68.779,-50.125);arcTo(-58.779,-80.902,-26.418,-80.902,32.361);lineTo(26.418,-80.902);arcTo(58.779,-80.902,68.779,-50.125,32.361);lineTo(85.106,0.125);arcTo(95.106,30.902,68.925,49.923,32.361);closePath();fillStyle=black;fill();restore();'
     );
   });
+
+  it('a polygon without sides draws nothing and has an empty rect', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var poly = new Konva.RegularPolygon({
+      x: 100,
+      y: 100,
+      radius: 50,
+      fill: 'green',
+    } as any);
+    layer.add(poly);
+
+    assert.doesNotThrow(() => layer.draw());
+    assert.deepEqual(poly.getSelfRect(), { x: 0, y: 0, width: 0, height: 0 });
+    assert.deepEqual(layer.getClientRect(), {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    });
+  });
 });

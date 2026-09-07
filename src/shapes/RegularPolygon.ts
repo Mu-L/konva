@@ -44,6 +44,9 @@ export class RegularPolygon extends Shape<RegularPolygonConfig> {
       sides = this.sides(),
       cornerRadius = this.cornerRadius();
 
+    if (!points.length) {
+      return;
+    }
     context.beginPath();
 
     if (!cornerRadius) {
@@ -72,6 +75,9 @@ export class RegularPolygon extends Shape<RegularPolygonConfig> {
   }
   getSelfRect() {
     const points = this._getPoints();
+    if (!points.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
 
     let minX = points[0].x;
     let maxX = points[0].x;

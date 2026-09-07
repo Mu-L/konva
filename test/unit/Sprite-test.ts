@@ -315,4 +315,80 @@ describe('Sprite', function () {
       }, 60);
     });
   });
+
+  it('getSelfRect() is the box of the current frame', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var sprite = new Konva.Sprite({
+      x: 10,
+      y: 10,
+      animation: 'standing',
+      animations: { standing: [0, 0, 49, 109, 52, 0, 40, 100] },
+      frameOffsets: { standing: [0, 0, 5, 7] },
+      fill: 'red',
+    } as any);
+    layer.add(sprite);
+
+    assert.deepEqual(sprite.getSelfRect(), {
+      x: 0,
+      y: 0,
+      width: 49,
+      height: 109,
+    });
+    sprite.frameIndex(1);
+    assert.deepEqual(sprite.getSelfRect(), {
+      x: 5,
+      y: 7,
+      width: 40,
+      height: 100,
+    });
+    assert.deepEqual(sprite.getClientRect(), {
+      x: 15,
+      y: 17,
+      width: 40,
+      height: 100,
+    });
+    sprite.cache();
+    assert.equal(sprite.isCached(), true);
+  });
+
+  it('an unknown animation or a frame past the end draws nothing instead of throwing', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var sprite = new Konva.Sprite({
+      animation: 'missing',
+      animations: { standing: [0, 0, 49, 109, 52, 0, 40, 100] },
+      // shorter than the frames: the missing offsets are 0
+      frameOffsets: { standing: [3, 4] },
+      fill: 'red',
+    } as any);
+    layer.add(sprite);
+
+    var empty = { x: 0, y: 0, width: 0, height: 0 };
+    assert.doesNotThrow(() => layer.draw());
+    assert.deepEqual(sprite.getSelfRect(), empty);
+    assert.doesNotThrow(() => sprite._updateIndex());
+
+    sprite.animation('standing');
+    sprite.frameIndex(5);
+    assert.doesNotThrow(() => layer.draw());
+    assert.deepEqual(sprite.getSelfRect(), empty);
+    sprite._updateIndex();
+    assert.equal(sprite.frameIndex(), 0);
+
+    sprite.frameIndex(-1);
+    assert.deepEqual(sprite.getSelfRect(), empty);
+    sprite.frameIndex(0.5);
+    assert.deepEqual(sprite.getSelfRect(), empty);
+    sprite.frameIndex(1);
+    assert.deepEqual(sprite.getSelfRect(), {
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 100,
+    });
+    assert.doesNotThrow(() => layer.draw());
+  });
 });

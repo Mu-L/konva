@@ -92,64 +92,73 @@ export class Sprite extends Shape<SpriteConfig> {
     });
   }
 
-  _sceneFunc(context: Context) {
+  // the current frame: its box in the sprite sheet and where it is drawn,
+  // or nothing when the animation key or the frame index does not exist
+  // (then nothing is drawn, like an image without an image)
+  _getFrame() {
     const anim = this.animation(),
+      set = this.animations()?.[anim],
       index = this.frameIndex(),
-      ix4 = index * 4,
-      set = this.animations()[anim],
-      offsets = this.frameOffsets(),
-      x = set[ix4 + 0],
-      y = set[ix4 + 1],
-      width = set[ix4 + 2],
-      height = set[ix4 + 3],
-      image = this.image();
+      ix4 = index * 4;
+    if (!set || !Number.isInteger(index) || ix4 < 0 || ix4 + 4 > set.length) {
+      return;
+    }
+    const offset = this.frameOffsets()?.[anim] || [];
+    return {
+      x: set[ix4],
+      y: set[ix4 + 1],
+      width: set[ix4 + 2],
+      height: set[ix4 + 3],
+      offsetX: offset[index * 2] || 0,
+      offsetY: offset[index * 2 + 1] || 0,
+    };
+  }
+  _sceneFunc(context: Context) {
+    const frame = this._getFrame();
+    if (!frame) {
+      return;
+    }
+    const { x, y, width, height, offsetX, offsetY } = frame;
+    const image = this.image();
 
     if (this.hasFill() || this.hasStroke()) {
       context.beginPath();
-      context.rect(0, 0, width, height);
+      context.rect(offsetX, offsetY, width, height);
       context.closePath();
       context.fillStrokeShape(this);
     }
 
     if (image) {
-      if (offsets) {
-        const offset = offsets[anim],
-          ix2 = index * 2;
-        context.drawImage(
-          image,
-          x,
-          y,
-          width,
-          height,
-          offset[ix2 + 0],
-          offset[ix2 + 1],
-          width,
-          height
-        );
-      } else {
-        context.drawImage(image, x, y, width, height, 0, 0, width, height);
-      }
+      context.drawImage(
+        image,
+        x,
+        y,
+        width,
+        height,
+        offsetX,
+        offsetY,
+        width,
+        height
+      );
     }
   }
   _hitFunc(context: Context) {
-    const anim = this.animation(),
-      index = this.frameIndex(),
-      ix4 = index * 4,
-      set = this.animations()[anim],
-      offsets = this.frameOffsets(),
-      width = set[ix4 + 2],
-      height = set[ix4 + 3];
-
+    const { x, y, width, height } = this.getSelfRect();
     context.beginPath();
-    if (offsets) {
-      const offset = offsets[anim];
-      const ix2 = index * 2;
-      context.rect(offset[ix2 + 0], offset[ix2 + 1], width, height);
-    } else {
-      context.rect(0, 0, width, height);
-    }
+    context.rect(x, y, width, height);
     context.closePath();
     context.fillShape(this);
+  }
+  getSelfRect() {
+    const frame = this._getFrame();
+    return frame
+      ? {
+          x: frame.offsetX,
+          y: frame.offsetY,
+          width: frame.width,
+          height: frame.height,
+        }
+      : { x: 0, y: 0, width: 0, height: 0 };
   }
 
   _useBufferCanvas() {
@@ -207,16 +216,10 @@ export class Sprite extends Shape<SpriteConfig> {
   }
   _updateIndex() {
     const index = this.frameIndex(),
-      animation = this.animation(),
-      animations = this.animations(),
-      anim = animations[animation],
-      len = anim.length / 4;
+      set = this.animations()?.[this.animation()],
+      len = set ? set.length / 4 : 0;
 
-    if (index < len - 1) {
-      this.frameIndex(index + 1);
-    } else {
-      this.frameIndex(0);
-    }
+    this.frameIndex(index < len - 1 ? index + 1 : 0);
   }
 
   frameIndex: GetSet<number, this>;
