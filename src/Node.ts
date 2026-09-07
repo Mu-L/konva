@@ -231,7 +231,8 @@ export interface GetClientRectConfig {
   skipTransform?: boolean;
   skipShadow?: boolean;
   skipStroke?: boolean;
-  relativeTo?: Container;
+  // any node works, the rect is expressed in its coordinate space
+  relativeTo?: Node;
 }
 
 export type KonvaEventListener<This, EventType> = (

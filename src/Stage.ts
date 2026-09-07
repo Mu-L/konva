@@ -15,11 +15,6 @@ export interface StageConfig extends ContainerConfig {
   container?: HTMLDivElement | string;
 }
 
-export interface ContainerGetSet<This> {
-  (container: HTMLDivElement | string): This;
-  (): HTMLDivElement;
-}
-
 // CONSTANTS
 const STAGE = 'Stage',
   STRING = 'string',
@@ -406,7 +401,8 @@ export class Stage extends Container<Layer, StageConfig> {
    *  method for determining if a point intersects a shape or not.
    *  It reads the hit canvas, so it finds what pointer events would: nodes with
    *  listening set to false or invisible nodes are not detected, a shape with opacity 0
-   *  is, and `hitStrokeWidth` counts. The position is in stage coordinates
+   *  is, and `hitStrokeWidth` counts. The position is relative to the top left corner of the
+   * stage container, like `stage.getPointerPosition()`, without the stage transform
    * @method
    * @name Konva.Stage#getIntersection
    * @param {Object} pos
@@ -509,7 +505,7 @@ export class Stage extends Container<Layer, StageConfig> {
    * @name Konva.Stage#getLayers
    */
   getLayers() {
-    return this.children;
+    return this.getChildren();
   }
   _bindContentEvents() {
     if (!Konva.isBrowser) {
@@ -1033,7 +1029,7 @@ export class Stage extends Container<Layer, StageConfig> {
   }
 
   // the setter takes an element or its id, the getter returns the element
-  container: ContainerGetSet<this>;
+  container: GetSet<HTMLDivElement, this, HTMLDivElement | string>;
 }
 
 Stage.prototype.nodeType = STAGE;

@@ -1,6 +1,8 @@
-export interface GetSet<Type, This> {
+// SetType widens what the setter accepts beyond what the getter returns,
+// like text.width('auto')
+export interface GetSet<Type, This, SetType = Type> {
   (): Type;
-  (v: Type | null | undefined): This;
+  (v: SetType | null | undefined): This;
 }
 
 export interface Vector2d {

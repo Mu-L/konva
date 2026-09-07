@@ -116,4 +116,18 @@ describe('Canvas', function () {
     assert.equal(canvas.height, 150);
     assert.equal(canvas._canvas.style.width, '200px');
   });
+
+  it('a Konva.pixelRatio reset to undefined or 0 falls back to the device pixel ratio', function () {
+    var ratio = Konva.pixelRatio;
+    try {
+      [undefined, 0, null].forEach((bad: any) => {
+        Konva.pixelRatio = bad;
+        var canvas = new SceneCanvas({ width: 10, height: 10 });
+        assert.isAbove(canvas.getPixelRatio(), 0, String(bad));
+        assert.equal(canvas.width, 10 * canvas.getPixelRatio());
+      });
+    } finally {
+      Konva.pixelRatio = ratio;
+    }
+  });
 });

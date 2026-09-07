@@ -55,7 +55,6 @@ export class Animation {
    */
   setLayers(layers: null | Layer | Layer[]) {
     // a copy, so that addLayer() never pushes into the caller's array
-    // (stage.getLayers() hands over the children of the stage)
     this.layers = layers ? ([] as Layer[]).concat(layers) : [];
     return this;
   }

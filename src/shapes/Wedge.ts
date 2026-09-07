@@ -109,7 +109,7 @@ Factory.addGetterSetter(Wedge, 'angle', 0, getNumberValidator());
  * @name Konva.Wedge#clockwise
  * @method
  * @param {Boolean} clockwise
- * @returns {Number}
+ * @returns {Boolean}
  * @example
  * // get clockwise flag
  * var clockwise = wedge.clockwise();

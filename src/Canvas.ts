@@ -41,7 +41,12 @@ export class Canvas {
   constructor(config: ICanvasConfig) {
     const conf = config || {};
 
-    const pixelRatio = conf.pixelRatio || Konva.pixelRatio;
+    // a Konva.pixelRatio reset to undefined or 0 means the device ratio
+    const pixelRatio =
+      conf.pixelRatio ||
+      Konva.pixelRatio ||
+      Konva._global.devicePixelRatio ||
+      1;
 
     this.pixelRatio = pixelRatio;
 

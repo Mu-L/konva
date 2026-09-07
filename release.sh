@@ -27,8 +27,7 @@ echo "New version: ${new_version}"
 echo "Pulling"
 git pull >/dev/null
 
-echo "build and test"
-npm run build >/dev/null
+echo "test"
 npm test
 
 
@@ -38,8 +37,6 @@ git commit -am "update CHANGELOG with new version" --allow-empty >/dev/null
 echo "npm version $1 --no-git-tag-version"
 npm version $1 --no-git-tag-version --allow-same-version >/dev/null
 
-echo "build for $1"
-npm run build >/dev/null
 git commit -am "build for $1" --allow-empty >/dev/null
 
 echo "create new git tag"

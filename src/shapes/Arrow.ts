@@ -8,7 +8,6 @@ import { Path } from './Path.ts';
 import type { Context } from '../Context.ts';
 
 export interface ArrowConfig extends LineConfig {
-  points: number[];
   tension?: number;
   closed?: boolean;
   pointerLength?: number;

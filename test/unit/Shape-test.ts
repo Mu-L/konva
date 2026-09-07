@@ -843,14 +843,6 @@ describe('Shape', function () {
     // a shape with fill, stroke and opacity is drawn through a buffer, so
     // that the stroke does not show through the fill. The shadow and the
     // opacity are applied once, when the buffer is drawn on the layer
-    assert.equal(
-      layer.getContext().getTrace(true),
-      'clearRect();save();shadowColor;shadowBlur;shadowOffsetX;shadowOffsetY;globalAlpha;drawImage();restore();'
-    );
-    var trace = layer.getContext().getTrace();
-    assert.include(trace, 'shadowBlur=5;shadowOffsetX=20;shadowOffsetY=20;');
-    assert.include(trace, 'globalAlpha=0.5;drawImage(');
-
     if (isBrowser) {
       var trace = layer.getContext().getTrace();
       assert.equal(

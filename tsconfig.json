@@ -26,5 +26,6 @@
     // https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#the-usedefineforclassfields-flag-and-the-declare-property-modifier
     "useDefineForClassFields": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/umd.ts"]
 }

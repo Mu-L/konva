@@ -51,13 +51,6 @@ export function stringToArray(string: string): string[] {
   return Array.from(segmenter.segment(string), (s) => s.segment);
 }
 
-// the setter comes first, as in GetSet, so that the overloads line up
-// with the ones of the base class
-export interface AutoSizeGetSet<This> {
-  (size: number | 'auto' | null | undefined): This;
-  (): number;
-}
-
 export interface TextConfig extends ShapeConfig {
   direction?: string;
   text?: string;
@@ -236,7 +229,7 @@ function checkDefaultFill(config?: TextConfig) {
  * @param {Number} [config.padding]
  * @param {Number} [config.lineHeight] default is 1
  * @param {String} [config.wrap] can be "word", "char", or "none". Default is word
- * @param {Boolean} [config.ellipsis] can be true or false. Default is false. If true, text that does not fit is cut and ends with "…". That needs a fixed width, plus either a fixed height or wrap="none"
+ * @param {Boolean} [config.ellipsis] can be true or false. Default is false. If true, text that does not fit is cut and ends with "…". That needs a fixed height or wrap="none"
  * @@shapeParams
  * @@nodeParams
  * @example
@@ -829,8 +822,8 @@ export class Text extends Shape<TextConfig> {
   ellipsis: GetSet<boolean, this>;
   charRenderFunc: GetSet<null | ((props: CharRenderProps) => void), this>;
   // 'auto' resets the fixed size; the getters return the measured size
-  width: AutoSizeGetSet<this>;
-  height: AutoSizeGetSet<this>;
+  width: GetSet<number, this, number | 'auto'>;
+  height: GetSet<number, this, number | 'auto'>;
 }
 
 Text.prototype._fillFunc = _fillFunc;
@@ -1060,7 +1053,7 @@ Factory.addGetterSetter(Text, 'wrap', WORD);
 /**
  * get/set ellipsis. Can be true or false. Default is false. If ellipsis is true,
  * Konva cuts the text that does not fit and ends it with "…" (one character).
- * That needs a fixed width, plus either a fixed height or wrap set to "none"
+ * That needs a fixed height or wrap set to "none"
  * @name Konva.Text#ellipsis
  * @method
  * @param {Boolean} ellipsis

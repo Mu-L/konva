@@ -15,7 +15,7 @@ lib
 src_old
 *.zip
 *_cache
-types
+/types
 out.png
 cmj
 .test-temp
