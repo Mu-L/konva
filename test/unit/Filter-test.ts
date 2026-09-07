@@ -432,4 +432,28 @@ describe('Filter', function () {
 
     assertAlmostDeepEqual(centerPixel(imageData), [255, 0, 0, 255], 3);
   });
+
+  it('red, green and blue clamp, round and invalidate the filter', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var rect = new Konva.Rect({ width: 10, height: 10, fill: 'red' });
+    layer.add(rect);
+    rect.cache();
+    rect.filters([Konva.Filters.RGBA]);
+    layer.draw();
+    assert.equal(rect._filterUpToDate, true);
+
+    rect.red(300);
+    assert.equal(rect.red(), 255);
+    assert.equal(rect._filterUpToDate, false);
+    layer.draw();
+    rect.green(-5);
+    assert.equal(rect.green(), 0);
+    assert.equal(rect._filterUpToDate, false);
+    layer.draw();
+    rect.blue(10.6);
+    assert.equal(rect.blue(), 11);
+    assert.equal(rect._filterUpToDate, false);
+  });
 });

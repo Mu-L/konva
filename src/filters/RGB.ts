@@ -33,18 +33,9 @@ export const RGB: Filter = function (imageData) {
   }
 };
 
-Factory.addGetterSetter(Node, 'red', 0, function (this: Node, val) {
-  this._filterUpToDate = false;
-  if (val > 255) {
-    return 255;
-  } else if (val < 0) {
-    return 0;
-  } else {
-    return Math.round(val);
-  }
-});
+Factory.addGetterSetter(Node, 'red', 0, RGBComponent, Factory.afterSetFilter);
 /**
- * get/set filter red value. Use with {@link Konva.Filters.RGB} filter.
+ * get/set filter red value. Use with {@link Konva.Filters.RGB} or {@link Konva.Filters.RGBA} filter.
  * @name red
  * @method
  * @memberof Konva.Node.prototype
@@ -52,18 +43,9 @@ Factory.addGetterSetter(Node, 'red', 0, function (this: Node, val) {
  * @returns {Integer}
  */
 
-Factory.addGetterSetter(Node, 'green', 0, function (this: Node, val) {
-  this._filterUpToDate = false;
-  if (val > 255) {
-    return 255;
-  } else if (val < 0) {
-    return 0;
-  } else {
-    return Math.round(val);
-  }
-});
+Factory.addGetterSetter(Node, 'green', 0, RGBComponent, Factory.afterSetFilter);
 /**
- * get/set filter green value. Use with {@link Konva.Filters.RGB} filter.
+ * get/set filter green value. Use with {@link Konva.Filters.RGB} or {@link Konva.Filters.RGBA} filter.
  * @name green
  * @method
  * @memberof Konva.Node.prototype
@@ -73,7 +55,7 @@ Factory.addGetterSetter(Node, 'green', 0, function (this: Node, val) {
 
 Factory.addGetterSetter(Node, 'blue', 0, RGBComponent, Factory.afterSetFilter);
 /**
- * get/set filter blue value. Use with {@link Konva.Filters.RGB} filter.
+ * get/set filter blue value. Use with {@link Konva.Filters.RGB} or {@link Konva.Filters.RGBA} filter.
  * @name blue
  * @method
  * @memberof Konva.Node.prototype
