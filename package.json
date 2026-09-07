@@ -38,6 +38,7 @@
   "scripts": {
     "start": "npm run test:watch",
     "compile": "npm run clean && npm run tsc && npm run rollup",
+    "prepublishOnly": "npm run build",
     "build": "npm run compile && gulp build",
     "fmt": "prettier --write .",
     "fmt:check": "prettier --check .",
