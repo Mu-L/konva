@@ -14,6 +14,7 @@ import {
   Konva,
   isBrowser,
   simulateMouseMove,
+  countCalls,
 } from './test-utils.ts';
 
 describe('Node', function () {
@@ -404,6 +405,25 @@ describe('Node', function () {
   });
 
   // ======================================================
+  it('exporting a node with a non-finite client rect reports an error', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({ x: NaN, y: 10, radius: 20, fill: 'red' });
+    layer.add(circle);
+    stage.add(layer);
+
+    var errors = countCalls(Konva.Util, 'error', () => {
+      circle.toCanvas();
+    });
+    assert.equal(errors, 1);
+
+    // an explicit box needs no client rect and passes silently
+    errors = countCalls(Konva.Util, 'error', () => {
+      circle.toCanvas({ x: 0, y: 0, width: 10, height: 10 });
+    });
+    assert.equal(errors, 0);
+  });
+
   it('toDataURL of moved shape', function () {
     var stage = addStage();
     var layer = new Konva.Layer();

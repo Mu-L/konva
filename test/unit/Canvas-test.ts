@@ -75,6 +75,30 @@ describe('Canvas', function () {
     assert.equal(sets, 2);
   });
 
+  it('setSize() reports a non-finite size and falls back to an empty canvas', function () {
+    var canvas = new SceneCanvas({ width: 10, height: 10, pixelRatio: 2 });
+    var errors = countCalls(Konva.Util, 'error', () => {
+      canvas.setSize(NaN, 50);
+    });
+    assert.equal(errors, 1);
+    assert.equal(canvas.width, 0);
+    assert.equal(canvas.height, 0);
+    assert.equal(canvas._canvas.style.width, '0px');
+
+    errors = countCalls(Konva.Util, 'error', () => {
+      canvas.setSize(100, Infinity);
+    });
+    assert.equal(errors, 1);
+    assert.equal(canvas._canvas.width, 0);
+
+    // undefined and null still mean 0, silently
+    errors = countCalls(Konva.Util, 'error', () => {
+      canvas.setSize(undefined, null);
+    });
+    assert.equal(errors, 0);
+    assert.equal(canvas.width, 0);
+  });
+
   it('setPixelRatio(), setWidth() and setHeight() keep the logical size at a fractional pixel ratio', function () {
     var canvas = new SceneCanvas({ width: 101, height: 51, pixelRatio: 1.5 });
     canvas.setPixelRatio(2);

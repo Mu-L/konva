@@ -496,6 +496,32 @@ describe('Util', function () {
     assert.equal(!!Konva.Transform, true);
   });
 
+  it('Transform.decompose() gives a zero skew for a degenerate matrix', function () {
+    // a scale of 0 on either axis makes the determinant 0; the skew used to
+    // come out as NaN (or Infinity), which Transformer then wrote onto the node
+    var flatX = new Konva.Transform([0, 0, 0, 1, 5, 6]).decompose();
+    assert.deepEqual(flatX, {
+      x: 5,
+      y: 6,
+      rotation: 0,
+      scaleX: 0,
+      scaleY: 1,
+      skewX: 0,
+      skewY: 0,
+    });
+
+    var flatY = new Konva.Transform([1, 0, 0, 0, 0, 0]).decompose();
+    assert.equal(flatY.scaleX, 1);
+    assert.equal(flatY.scaleY, 0);
+    assert.equal(flatY.skewX, 0);
+    assert.equal(flatY.skewY, 0);
+
+    // a pure shear that collapses the plane to a line
+    var collapsed = new Konva.Transform([1, 0, 1, 0, 0, 0]).decompose();
+    assert.equal(collapsed.skewX, 0);
+    assert.equal(collapsed.skewY, 0);
+  });
+
   it('_prepareToStringify does not mutate its input', function () {
     var o: any = { a: 1 };
     o.c = {

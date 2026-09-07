@@ -137,6 +137,13 @@ export class Canvas {
     return Math.floor((size || 0) * this.pixelRatio);
   }
   setSize(width, height) {
+    // a NaN or Infinity size would silently give an empty bitmap
+    if (!isFinite(width ?? 0) || !isFinite(height ?? 0)) {
+      Util.error(
+        `Canvas size must be finite numbers, got ${width}x${height}. The canvas is left empty.`
+      );
+      width = height = 0;
+    }
     width = width || 0;
     height = height || 0;
     const pixelRatio = this.pixelRatio;

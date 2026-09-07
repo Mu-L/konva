@@ -6,6 +6,7 @@ import { Factory } from '../Factory.ts';
 import { _registerNode } from '../Global.ts';
 import type { ShapeConfig } from '../Shape.ts';
 import { Shape } from '../Shape.ts';
+import { Util } from '../Util.ts';
 import { getNumberArrayValidator, getNumberValidator } from '../Validators.ts';
 
 import type { Context } from '../Context.ts';
@@ -370,25 +371,7 @@ export class Line<
       // _sceneFunc never draws.
       points = [points[0], points[1], ...getBezierExtremaPoints(points)];
     }
-    let minX = points[0];
-    let maxX = points[0];
-    let minY = points[1];
-    let maxY = points[1];
-    let x, y;
-    for (let i = 0; i < points.length / 2; i++) {
-      x = points[i * 2];
-      y = points[i * 2 + 1];
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-    }
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    };
+    return Util._getPointsRect(points);
   }
 
   closed: GetSet<boolean, this>;

@@ -2,6 +2,7 @@ import { Factory } from '../Factory.ts';
 import { _registerNode } from '../Global.ts';
 import type { ShapeConfig } from '../Shape.ts';
 import { Shape } from '../Shape.ts';
+import { Util } from '../Util.ts';
 
 import {
   getCubicArcLength,
@@ -15,6 +16,20 @@ import type { GetSet, PathSegment } from '../types.ts';
 export interface PathConfig extends ShapeConfig {
   data?: string;
 }
+
+// how many numbers each path command takes
+const PARAM_COUNT = {
+  m: 2,
+  l: 2,
+  h: 1,
+  v: 1,
+  c: 6,
+  s: 4,
+  q: 4,
+  t: 2,
+  a: 7,
+  z: 0,
+};
 /**
  * Path constructor.
  * @author Jason Follas
@@ -193,34 +208,7 @@ export class Path extends Shape<PathConfig> {
         points = points.concat(data.points);
       }
     });
-    if (!points.length) {
-      return { x: 0, y: 0, width: 0, height: 0 };
-    }
-    let minX = points[0];
-    let maxX = points[0];
-    let minY = points[1];
-    let maxY = points[1];
-    let x, y;
-    for (let i = 0; i < points.length / 2; i++) {
-      x = points[i * 2];
-      y = points[i * 2 + 1];
-
-      // skip bad values
-      if (!isNaN(x)) {
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-      }
-      if (!isNaN(y)) {
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      }
-    }
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    };
+    return Util._getPointsRect(points);
   }
   /**
    * Return length of the path.
@@ -569,8 +557,9 @@ export class Path extends Shape<PathConfig> {
       }
 
       while (p.length > 0) {
-        if (isNaN(p[0])) {
-          // case for a trailing comma before next command
+        // z takes no numbers, and a command with too few of them ("L20"
+        // with no y) is dropped rather than parsed into a NaN segment
+        if (p.length < PARAM_COUNT[c.toLowerCase()] || c === 'z' || c === 'Z') {
           break;
         }
 
@@ -669,7 +658,7 @@ export class Path extends Shape<PathConfig> {
             ctlPtx = cpx;
             ctlPty = cpy;
             prevCmd = ca[ca.length - 1];
-            if (prevCmd.command === 'C') {
+            if (prevCmd?.command === 'C') {
               ctlPtx = cpx + (cpx - prevCmd.points[2]);
               ctlPty = cpy + (cpy - prevCmd.points[3]);
             }
@@ -683,7 +672,7 @@ export class Path extends Shape<PathConfig> {
             ctlPtx = cpx;
             ctlPty = cpy;
             prevCmd = ca[ca.length - 1];
-            if (prevCmd.command === 'C') {
+            if (prevCmd?.command === 'C') {
               ctlPtx = cpx + (cpx - prevCmd.points[2]);
               ctlPty = cpy + (cpy - prevCmd.points[3]);
             }
@@ -710,7 +699,7 @@ export class Path extends Shape<PathConfig> {
             ctlPtx = cpx;
             ctlPty = cpy;
             prevCmd = ca[ca.length - 1];
-            if (prevCmd.command === 'Q') {
+            if (prevCmd?.command === 'Q') {
               ctlPtx = cpx + (cpx - prevCmd.points[0]);
               ctlPty = cpy + (cpy - prevCmd.points[1]);
             }
@@ -723,7 +712,7 @@ export class Path extends Shape<PathConfig> {
             ctlPtx = cpx;
             ctlPty = cpy;
             prevCmd = ca[ca.length - 1];
-            if (prevCmd.command === 'Q') {
+            if (prevCmd?.command === 'Q') {
               ctlPtx = cpx + (cpx - prevCmd.points[0]);
               ctlPty = cpy + (cpy - prevCmd.points[1]);
             }
@@ -733,6 +722,7 @@ export class Path extends Shape<PathConfig> {
             points.push(ctlPtx, ctlPty, cpx, cpy);
             break;
           case 'A':
+          case 'a':
             rx = p.shift()!;
             ry = p.shift()!;
             psi = p.shift()!;
@@ -740,43 +730,34 @@ export class Path extends Shape<PathConfig> {
             fs = p.shift()!;
             x1 = cpx;
             y1 = cpy;
-            cpx = p.shift()!;
-            cpy = p.shift()!;
+            if (c === 'a') {
+              cpx += p.shift()!;
+              cpy += p.shift()!;
+            } else {
+              cpx = p.shift()!;
+              cpy = p.shift()!;
+            }
             cmd = 'A';
-            points = this.convertEndpointToCenterParameterization(
-              x1,
-              y1,
-              cpx,
-              cpy,
-              fa,
-              fs,
-              rx,
-              ry,
-              psi
-            );
-            break;
-          case 'a':
-            rx = p.shift();
-            ry = p.shift();
-            psi = p.shift();
-            fa = p.shift();
-            fs = p.shift();
-            x1 = cpx;
-            y1 = cpy;
-            cpx += p.shift()!;
-            cpy += p.shift()!;
-            cmd = 'A';
-            points = this.convertEndpointToCenterParameterization(
-              x1,
-              y1,
-              cpx,
-              cpy,
-              fa,
-              fs,
-              rx,
-              ry,
-              psi
-            );
+            // per SVG, an arc between coincident end points is omitted
+            // and a zero radius makes it a straight line
+            if (cpx === x1 && cpy === y1) {
+              continue;
+            } else if (!rx || !ry) {
+              cmd = 'L';
+              points.push(cpx, cpy);
+            } else {
+              points = this.convertEndpointToCenterParameterization(
+                x1,
+                y1,
+                cpx,
+                cpy,
+                fa,
+                fs,
+                rx,
+                ry,
+                psi
+              );
+            }
             break;
         }
 

@@ -1471,6 +1471,36 @@ describe('DragAndDrop', function () {
     assert.equal(Konva.DD._dragElements.size, 0);
   });
 
+  it('a dragBoundFunc returning a non-finite position keeps the node where it was', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    var circle = new Konva.Circle({
+      x: 70,
+      y: 70,
+      radius: 70,
+      fill: 'green',
+      draggable: true,
+      dragBoundFunc: (pos) => ({ x: NaN, y: pos.y }),
+    });
+    layer.add(circle);
+    stage.add(layer);
+
+    var warns = countCalls(Konva.Util, 'warn', () => {
+      simulateMouseDown(stage, { x: 70, y: 70 });
+      simulateMouseMove(stage, { x: 80, y: 90 });
+    });
+    assert.equal(warns, 1);
+    assert.equal(circle.x(), 70);
+    assert.equal(circle.y(), 70);
+
+    // a fixed function takes over from the next move
+    circle.dragBoundFunc((pos) => pos);
+    simulateMouseMove(stage, { x: 90, y: 100 });
+    simulateMouseUp(stage, { x: 90, y: 100 });
+    assert.equal(circle.x(), 90);
+    assert.equal(circle.y(), 100);
+  });
+
   it('a clamping dragBoundFunc does not freeze the node after a programmatic move', function () {
     var stage = addStage();
     var layer = new Konva.Layer();

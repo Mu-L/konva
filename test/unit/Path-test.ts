@@ -10,6 +10,7 @@ import {
   compareLayerAndCanvas,
   cloneAndCompareLayer,
   isNode,
+  assertAlmostEqual,
   assertAlmostDeepEqual,
   isBrowser,
   countCalls,
@@ -51,10 +52,11 @@ describe('Path', function () {
     assert.equal(path.data(), 'M200,100h100v50z');
     assert.equal(path.dataArray.length, 4);
 
+    // an incomplete command is dropped, so nothing is drawn
     path.data('M200');
 
     assert.equal(path.data(), 'M200');
-    assert.equal(path.dataArray.length, 1);
+    assert.equal(path.dataArray.length, 0);
 
     path.data('M200,100h100v50z');
 
@@ -1933,6 +1935,66 @@ describe('Path', function () {
     var arc = Konva.Path.parsePathData('M0 0 a5 5 0 00 10 10')[1];
     assert.equal(arc.command, 'A');
     assert.isTrue(arc.points.every((p) => isFinite(p)));
+  });
+
+  it('a command with too few numbers is skipped, it does not poison the path', function () {
+    // "L20" is missing its y: skip it and keep the current point for the next command
+    var path = new Konva.Path({ data: 'M10 10 L20 L30 30' });
+    assert.equal(path.dataArray.length, 2);
+    assert.deepEqual(path.dataArray[1].points, [30, 30]);
+    assert.deepEqual(path.dataArray[1].start, { x: 10, y: 10 });
+    assert.deepEqual(path.getSelfRect(), {
+      x: 10,
+      y: 10,
+      width: 20,
+      height: 20,
+    });
+    assertAlmostEqual(path.getLength(), Math.sqrt(800));
+
+    // a truncated arc at the very end
+    var arc = new Konva.Path({ data: 'M0 0 L10 0 A5 5 0 0 1' });
+    assert.equal(arc.dataArray.length, 2);
+    assert.equal(arc.getLength(), 10);
+
+    // a smooth curve right after a dropped command has nothing to reflect
+    [
+      'M10 S10 10 20 20',
+      'M10 s10 10 20 20',
+      'M10 T10 10',
+      'M10 t10 10',
+    ].forEach((data) => {
+      assert.equal(Konva.Path.parsePathData(data).length, 1, data);
+    });
+  });
+
+  it('numbers after a close command are dropped', function () {
+    var segments = Konva.Path.parsePathData('M0 0 L10 10 z 5 5 L20 20');
+    assert.deepEqual(
+      segments.map((s) => s.command),
+      ['M', 'L', 'z', 'L']
+    );
+  });
+
+  it('an arc with a zero radius is a straight line, per SVG', function () {
+    ['M0 0 A0 10 0 0 1 30 40', 'M0 0 a10 0 0 0 1 30 40'].forEach((data) => {
+      var path = new Konva.Path({ data });
+      assert.equal(path.dataArray.length, 2, data);
+      assert.equal(path.dataArray[1].command, 'L', data);
+      assert.deepEqual(path.dataArray[1].points, [30, 40], data);
+      assert.equal(path.getLength(), 50, data);
+    });
+  });
+
+  it('an arc whose end points coincide is omitted, per SVG', function () {
+    ['M10 10 A5 5 0 0 1 10 10 L20 10', 'M10 10 a5 5 0 0 1 0 0 L20 10'].forEach(
+      (data) => {
+        var path = new Konva.Path({ data });
+        assert.equal(path.dataArray.length, 2, data);
+        assert.equal(path.dataArray[1].command, 'L', data);
+        assert.equal(path.getLength(), 10, data);
+        assertAlmostDeepEqual(path.getPointAtLength(5), { x: 15, y: 10 }, 0.01);
+      }
+    );
   });
 
   it('getPointAtLength past the end of a path ending with an arc returns the end point', function () {

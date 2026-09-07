@@ -402,25 +402,13 @@ export class TextPath extends Shape<TextPathConfig> {
       points.push(info.p1.x);
       points.push(info.p1.y);
     });
-    let minX = points[0] || 0;
-    let maxX = points[0] || 0;
-    let minY = points[1] || 0;
-    let maxY = points[1] || 0;
-    let x, y;
-    for (let i = 0; i < points.length / 2; i++) {
-      x = points[i * 2];
-      y = points[i * 2 + 1];
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-    }
+    const rect = Util._getPointsRect(points);
     const fontSize = this.fontSize();
     return {
-      x: minX - fontSize / 2,
-      y: minY - fontSize / 2,
-      width: maxX - minX + fontSize,
-      height: maxY - minY + fontSize,
+      x: rect.x - fontSize / 2,
+      y: rect.y - fontSize / 2,
+      width: rect.width + fontSize,
+      height: rect.height + fontSize,
     };
   }
   fontFamily: GetSet<string, this>;

@@ -257,13 +257,15 @@ export class Transform {
       skewY: 0,
     };
 
-    // Apply the QR-like decomposition.
+    // Apply the QR-like decomposition. A zero determinant (a scale of 0, or
+    // a shear that collapses the plane) has no skew, rather than a NaN or
+    // an infinite one
     if (a != 0 || b != 0) {
       const r = Math.sqrt(a * a + b * b);
       result.rotation = b > 0 ? Math.acos(a / r) : -Math.acos(a / r);
       result.scaleX = r;
       result.scaleY = delta / r;
-      result.skewX = (a * c + b * d) / delta;
+      result.skewX = delta && (a * c + b * d) / delta;
       result.skewY = 0;
     } else if (c != 0 || d != 0) {
       const s = Math.sqrt(c * c + d * d);
@@ -272,7 +274,7 @@ export class Transform {
       result.scaleX = delta / s;
       result.scaleY = s;
       result.skewX = 0;
-      result.skewY = (a * c + b * d) / delta;
+      result.skewY = delta && (a * c + b * d) / delta;
     } else {
       // a = b = c = d = 0
     }
@@ -914,6 +916,36 @@ export const Util = {
       g: Math.round(rgb[1]),
       b: Math.round(rgb[2]),
       a,
+    };
+  },
+  // the bounds of a flat [x0, y0, x1, y1, ...] array. A NaN coordinate is
+  // skipped so one bad point cannot turn the whole box into NaN; no usable
+  // point at all is an empty rect
+  _getPointsRect(points: number[]): IRect {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < points.length; i += 2) {
+      const x = points[i];
+      const y = points[i + 1];
+      if (!isNaN(x)) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+      }
+      if (!isNaN(y)) {
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    if (!isFinite(minX + minY)) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   },
   /**

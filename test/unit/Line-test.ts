@@ -352,6 +352,18 @@ describe('Line', function () {
     assert.deepEqual(dot.getSelfRect(), { x: 5, y: 5, width: 0, height: 0 });
   });
 
+  it('getSelfRect skips a NaN coordinate instead of returning a NaN rect', function () {
+    var line = new Konva.Line({
+      points: [NaN, 0, 10, NaN, 100, 50],
+    });
+    assert.deepEqual(line.getSelfRect(), {
+      x: 10,
+      y: 0,
+      width: 90,
+      height: 50,
+    });
+  });
+
   it('getClientRect with tension 2', function () {
     var stage = addStage();
     stage.draggable(true);

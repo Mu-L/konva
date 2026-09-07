@@ -9,10 +9,21 @@ import {
   createCanvasAndContext,
   loadImage,
   getPixelRatio,
+  countCalls,
   collectCanvasAllocations,
 } from './test-utils.ts';
 
 describe('Caching', function () {
+  it('cache() with non-finite bounds is skipped, with an error, and stays chainable', function () {
+    // a NaN position would draw nothing into the cache canvas
+    var rect = new Konva.Rect({ x: 10, y: 10, width: 100, height: 50 });
+    var errors = countCalls(Konva.Util, 'error', () => {
+      assert.equal(rect.cache({ x: NaN, width: 10, height: 10 }), rect);
+    });
+    assert.equal(errors, 1);
+    assert.equal(rect.isCached(), false);
+  });
+
   it('cache simple rectangle', function () {
     var stage = addStage();
 

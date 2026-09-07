@@ -473,11 +473,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       drawBorder = conf.drawBorder || false,
       hitCanvasPixelRatio = conf.hitCanvasPixelRatio || 1;
 
-    if (!width || !height) {
+    if (!width || !height || !isFinite(x + y + width + height)) {
       Util.error(
-        'Can not cache the node. Width or height of the node equals 0. Caching is skipped.'
+        `Can not cache the node. Its size is 0 or its bounds are not finite numbers (${x}, ${y}, ${width}x${height}). Caching is skipped.`
       );
-      return;
+      return this;
     }
 
     // because using Math.floor on x, y position may shift drawing
@@ -2080,6 +2080,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     const box = needsBox
       ? this.getClientRect()
       : { x: 0, y: 0, width: 0, height: 0 };
+    if (!isFinite(box.x + box.y + box.width + box.height)) {
+      Util.error(
+        `Cannot find the bounds of the node to export, its client rect is ${box.x}, ${box.y}, ${box.width}x${box.height}. Check its position, size and points.`
+      );
+    }
 
     const stage = this.getStage(),
       x = config.x !== undefined ? config.x : Math.floor(box.x),
@@ -2642,6 +2647,11 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
         Util.warn(
           'dragBoundFunc did not return any value. That is unexpected behavior. You must return new absolute position from dragBoundFunc.'
         );
+      } else if (!Util._isNumber(bounded.x) || !Util._isNumber(bounded.y)) {
+        Util.warn(
+          `dragBoundFunc returned a position with a non-finite x or y (${bounded.x}, ${bounded.y}). The node was not moved.`
+        );
+        return;
       } else {
         newNodePos = bounded;
       }
