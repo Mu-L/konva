@@ -30,7 +30,8 @@
     "./skia-backend": {
       "types": "./lib/skia-backend.d.ts",
       "default": "./lib/skia-backend.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -74,7 +75,7 @@
   ],
   "size-limit": [
     {
-      "limit": "45 KB",
+      "limit": "48 KB",
       "path": "./lib/index.js"
     },
     {

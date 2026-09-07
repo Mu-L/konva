@@ -4,10 +4,10 @@ function equal(val1, val2, message) {
   }
 }
 
-// try to import only core from built lib
-import Konva from '../lib/Core.js';
-import '../lib/canvas-backend.js';
-import { Rect } from '../lib/shapes/Rect.js';
+// try to import only core from the built lib, through the exports map
+import Konva from 'konva/lib/Core.js';
+import 'konva/canvas-backend';
+import { Rect } from 'konva/lib/shapes/Rect.js';
 
 equal(Rect !== undefined, true, 'Rect is defined');
 
