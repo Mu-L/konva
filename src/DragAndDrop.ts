@@ -134,7 +134,7 @@ export const DD = {
   _endDragBefore(evt?, win?: Window) {
     const drawNodes: Array<Container> = [];
     const positioned = new Set<Stage>();
-    DD._dragElements.forEach((elem) => {
+    DD._dragElements.forEach((elem, key) => {
       const { node } = elem;
       // we need to find pointer relative to that node
       const stage = node.getStage()!;
@@ -149,16 +149,21 @@ export const DD = {
         positioned.add(stage);
       }
 
-      const pos = stage._changedPointerPositions.find(
-        (pos) => pos.id === elem.pointerId
-      );
+      // a drag started without an event (node.startDrag()) that has not
+      // moved yet has no pointer: any release ends it
+      const released =
+        elem.pointerId === undefined ||
+        stage._changedPointerPositions.some((pos) => pos.id === elem.pointerId);
 
-      // that pointer is not related
-      if (!pos) {
+      // that pointer is not related: a "ready" element of another pointer
+      // waits for its own release
+      if (!released) {
         return;
       }
 
-      if (elem.dragStatus === 'dragging' || elem.dragStatus === 'stopped') {
+      if (elem.dragStatus === 'ready') {
+        DD._dragElements.delete(key);
+      } else {
         // if a node is stopped manually we still need to reset events:
         DD.justDragged = true;
         Konva._mouseListenClick = false;
@@ -187,18 +192,20 @@ export const DD = {
   },
   _endDragAfter(evt) {
     DD._dragElements.forEach((elem, key) => {
-      if (elem.dragStatus === 'stopped') {
-        elem.node.fire(
-          'dragend',
-          {
-            type: 'dragend',
-            target: elem.node,
-            evt: evt,
-          },
-          true
-        );
+      if (elem.dragStatus !== 'stopped') {
+        return;
       }
-      if (elem.dragStatus !== 'dragging') {
+      elem.node.fire(
+        'dragend',
+        {
+          type: 'dragend',
+          target: elem.node,
+          evt: evt,
+        },
+        true
+      );
+      // a dragend handler may have started a new drag of the node
+      if ((elem.dragStatus as string) !== 'dragging') {
         DD._dragElements.delete(key);
       }
     });

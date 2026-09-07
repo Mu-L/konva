@@ -1500,4 +1500,106 @@ describe('DragAndDrop', function () {
     simulateMouseUp(stage, { x: 200, y: 60 });
     assert.equal(rect.x(), 100);
   });
+
+  it('lifting one finger keeps the pending drag of the other finger', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle1 = new Konva.Circle({
+      x: 70,
+      y: 70,
+      radius: 50,
+      fill: 'green',
+      draggable: true,
+    });
+    var circle2 = new Konva.Circle({
+      x: 270,
+      y: 70,
+      radius: 50,
+      fill: 'green',
+      draggable: true,
+    });
+    layer.add(circle1, circle2);
+    layer.draw();
+
+    simulateTouchStart(stage, [
+      { x: 70, y: 70, id: 0 },
+      { x: 270, y: 70, id: 1 },
+    ]);
+    // the second finger goes up, the first one stays down without moving
+    simulateTouchEnd(
+      stage,
+      [{ x: 70, y: 70, id: 0 }],
+      [{ x: 270, y: 70, id: 1 }]
+    );
+    simulateTouchMove(
+      stage,
+      [{ x: 100, y: 100, id: 0 }],
+      [{ x: 100, y: 100, id: 0 }]
+    );
+    assert.equal(circle1.isDragging(), true);
+    assert.equal(circle1.x(), 100);
+    assert.equal(circle1.y(), 100);
+
+    simulateTouchEnd(stage, [], [{ x: 100, y: 100, id: 0 }]);
+    assert.equal(circle1.isDragging(), false);
+    assert.equal(Konva.DD._dragElements.size, 0);
+  });
+
+  it('a programmatic startDrag() without a pointer ends on the next release', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({
+      x: 70,
+      y: 70,
+      radius: 50,
+      fill: 'green',
+      draggable: true,
+    });
+    layer.add(circle);
+    layer.draw();
+
+    circle.startDrag();
+    assert.equal(circle.isDragging(), true);
+    simulateMouseUp(stage, { x: 70, y: 70 });
+    assert.equal(circle.isDragging(), false);
+    assert.equal(Konva.isDragging(), false);
+    assert.equal(Konva.DD._dragElements.size, 0);
+  });
+
+  it('startDrag() inside a dragend handler keeps the node dragging', function () {
+    var stage = addStage();
+    var layer = new Konva.Layer();
+    stage.add(layer);
+    var circle = new Konva.Circle({
+      x: 70,
+      y: 70,
+      radius: 50,
+      fill: 'green',
+      draggable: true,
+    });
+    layer.add(circle);
+    layer.draw();
+
+    var dragstarts = 0;
+    circle.on('dragstart', function () {
+      dragstarts += 1;
+    });
+    circle.on('dragend', function () {
+      circle.startDrag();
+    });
+
+    simulateMouseDown(stage, { x: 70, y: 70 });
+    simulateMouseMove(stage, { x: 100, y: 100 });
+    simulateMouseUp(stage, { x: 100, y: 100 });
+    assert.equal(dragstarts, 2);
+    assert.equal(circle.isDragging(), true);
+    simulateMouseMove(stage, { x: 150, y: 150 });
+    assert.equal(circle.x(), 150);
+
+    circle.off('dragend');
+    simulateMouseUp(stage, { x: 150, y: 150 });
+    assert.equal(circle.isDragging(), false);
+  });
 });
