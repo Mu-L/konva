@@ -5,7 +5,6 @@ import { Node } from './Node.ts';
 import { Factory } from './Factory.ts';
 import { SceneCanvas, HitCanvas } from './Canvas.ts';
 import type { Stage } from './Stage.ts';
-import { getBooleanValidator } from './Validators.ts';
 
 import type { GetSet, IRect, Vector2d } from './types.ts';
 import type { Group } from './Group.ts';
@@ -587,7 +586,8 @@ Factory.addGetterSetter(Layer, 'imageSmoothingEnabled', true);
  */
 Factory.addGetterSetter(Layer, 'clearBeforeDraw', true);
 
-Factory.addGetterSetter(Layer, 'hitGraphEnabled', true, getBooleanValidator());
+// the getter and setter are the deprecated ones above
+Factory.addOverloadedGetterSetter(Layer, 'hitGraphEnabled');
 /**
  * get/set hitGraphEnabled flag.  **DEPRECATED!** Use `layer.listening(false)` instead.
  *  Disabling the hit graph will greatly increase

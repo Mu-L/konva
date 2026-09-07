@@ -51,28 +51,6 @@ export interface IFrame {
 
 export type AnimationFn = (frame: IFrame) => boolean | void;
 
-export const KonvaNodeEvent = {
-  mouseover: 'mouseover',
-  mouseout: 'mouseout',
-  mousemove: 'mousemove',
-  mouseleave: 'mouseleave',
-  mouseenter: 'mouseenter',
-  mousedown: 'mousedown',
-  mouseup: 'mouseup',
-  wheel: 'wheel',
-  contextmenu: 'contextmenu',
-  click: 'click',
-  dblclick: 'dblclick',
-  touchstart: 'touchstart',
-  touchmove: 'touchmove',
-  touchend: 'touchend',
-  tap: 'tap',
-  dbltap: 'dbltap',
-  dragstart: 'dragstart',
-  dragmove: 'dragmove',
-  dragend: 'dragend',
-} as const;
-
 export interface RGB {
   r: number;
   g: number;

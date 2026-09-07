@@ -3,29 +3,6 @@ import type { Context } from './Context.ts';
 import { SceneContext, HitContext } from './Context.ts';
 import { Konva } from './Global.ts';
 
-// calculate pixel ratio
-let _pixelRatio;
-function getDevicePixelRatio() {
-  if (_pixelRatio) {
-    return _pixelRatio;
-  }
-  const canvas = Util.createCanvasElement();
-  const context = canvas.getContext('2d') as any;
-  _pixelRatio = (function () {
-    const devicePixelRatio = Konva._global.devicePixelRatio || 1,
-      backingStoreRatio =
-        context.webkitBackingStorePixelRatio ||
-        context.mozBackingStorePixelRatio ||
-        context.msBackingStorePixelRatio ||
-        context.oBackingStorePixelRatio ||
-        context.backingStorePixelRatio ||
-        1;
-    return devicePixelRatio / backingStoreRatio;
-  })();
-  Util.releaseCanvas(canvas);
-  return _pixelRatio;
-}
-
 interface ICanvasConfig {
   width?: number;
   height?: number;
@@ -64,8 +41,7 @@ export class Canvas {
   constructor(config: ICanvasConfig) {
     const conf = config || {};
 
-    const pixelRatio =
-      conf.pixelRatio || Konva.pixelRatio || getDevicePixelRatio();
+    const pixelRatio = conf.pixelRatio || Konva.pixelRatio;
 
     this.pixelRatio = pixelRatio;
 

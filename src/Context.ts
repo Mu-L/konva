@@ -941,11 +941,8 @@ export class SceneContext extends Context {
   }
   _applyShadow(shape) {
     const color = shape.getShadowRGBA() ?? 'black',
-      blur = shape.getShadowBlur() ?? 5,
-      offset = shape.getShadowOffset() ?? {
-        x: 0,
-        y: 0,
-      },
+      blur = shape.getShadowBlur(),
+      offset = shape.getShadowOffset(),
       scale = shape.getAbsoluteScale(),
       ratio = this.canvas.getPixelRatio(),
       scaleX = scale.x * ratio,
