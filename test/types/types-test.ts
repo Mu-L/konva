@@ -95,3 +95,12 @@ new Konva.Rect().on('xChange', (e) => {
 });
 
 export { textWidth, textHeight, container, box, filter, cap, join, x };
+
+// The integration hook is Stage-only, optional, and synchronously callable.
+const eventBatch: ((run: () => void) => void) | undefined =
+  stage.eventBatchFunc();
+stage.eventBatchFunc((run) => run());
+stage.eventBatchFunc(undefined);
+// @ts-expect-error Shapes do not expose a framework integration hook.
+new Konva.Rect().eventBatchFunc();
+void eventBatch;

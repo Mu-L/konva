@@ -46,7 +46,8 @@ export const DD = {
   // window has pointer positions the stages of that window can use
   _listenToWindow(win: Window) {
     const endDragBefore = (evt) => DD._endDragBefore(evt, win);
-    const drag = (evt) => DD._drag(evt, win);
+    const drag = (evt) => DD._batchEvents(() => DD._drag(evt, win), win);
+    const endDragAfter = (evt) => DD._batchEvents(() => DD._endDragAfter(evt));
 
     win.addEventListener('mouseup', endDragBefore, true);
     win.addEventListener('touchend', endDragBefore, true);
@@ -56,9 +57,28 @@ export const DD = {
     win.addEventListener('mousemove', drag);
     win.addEventListener('touchmove', drag);
 
-    win.addEventListener('mouseup', DD._endDragAfter, false);
-    win.addEventListener('touchend', DD._endDragAfter, false);
-    win.addEventListener('touchcancel', DD._endDragAfter, false);
+    win.addEventListener('mouseup', endDragAfter, false);
+    win.addEventListener('touchend', endDragAfter, false);
+    win.addEventListener('touchcancel', endDragAfter, false);
+  },
+
+  _batchEvents(callback: () => void, win?: Window) {
+    if (!DD._dragElements.size) return;
+    // One scope per integration, even when several stages use the same callback.
+    // Keep all positions and handlers in the original order across those stages.
+    const batches = new Set<(callback: () => void) => void>();
+    for (const { node } of DD._dragElements.values()) {
+      const stage = node.getStage();
+      if (!stage || (win && stage._getOwnerWindow() !== win)) continue;
+      const batch = stage.eventBatchFunc();
+      if (batch) batches.add(batch);
+    }
+    let run = callback;
+    for (const batch of batches) {
+      const next = run;
+      run = () => Util._batchEvents(batch, next);
+    }
+    run();
   },
 
   // methods

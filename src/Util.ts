@@ -1018,6 +1018,31 @@ export const Util = {
     }
     console.warn(KONVA_WARNING + str);
   },
+  _batchEvents(
+    batch: ((run: () => void) => void) | undefined,
+    run: () => void
+  ) {
+    if (!batch) return run();
+    let called = false;
+    let active = true;
+    try {
+      batch(() => {
+        if (called || !active) {
+          Util.warn(
+            'eventBatchFunc must call its argument exactly once, synchronously.'
+          );
+          return;
+        }
+        called = true;
+        run();
+      });
+    } finally {
+      active = false;
+      if (!called) {
+        Util.warn('eventBatchFunc must call its argument synchronously.');
+      }
+    }
+  },
   each(obj: object, func: Function) {
     for (const key in obj) {
       func(key, obj[key as keyof typeof obj]);

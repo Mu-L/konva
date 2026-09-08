@@ -13,6 +13,7 @@ import * as PointerEvents from './PointerEvents.ts';
 
 export interface StageConfig extends ContainerConfig {
   container?: HTMLDivElement | string;
+  eventBatchFunc?: (callback: () => void) => void;
 }
 
 // CONSTANTS
@@ -515,11 +516,14 @@ export class Stage extends Container<Layer, StageConfig> {
       this.content.addEventListener(
         event,
         (evt) => {
-          this[methodName](evt);
+          this._batchEvents(() => this[methodName](evt));
         },
         { passive: false }
       );
     });
+  }
+  _batchEvents(callback: () => void) {
+    Util._batchEvents(this.eventBatchFunc(), callback);
   }
   _pointerenter(evt: PointerEvent) {
     this.setPointersPositions(evt);
@@ -1039,6 +1043,7 @@ export class Stage extends Container<Layer, StageConfig> {
 
   // the setter takes an element or its id, the getter returns the element
   container: GetSet<HTMLDivElement, this, HTMLDivElement | string>;
+  eventBatchFunc: GetSet<((callback: () => void) => void) | undefined, this>;
 }
 
 Stage.prototype.nodeType = STAGE;
@@ -1064,3 +1069,20 @@ _registerNode(Stage);
  * stage.container(popout.document.body);
  */
 Factory.addGetterSetter(Stage, 'container');
+
+/**
+ * Get/set the callback used by framework integrations to batch native input.
+ * The callback must invoke its argument exactly once, synchronously. Existing
+ * node events keep their order and cancellation behavior. Direct node.fire()
+ * and programmatic mutations do not create a batch.
+ * Missing calls warn; duplicate or late calls warn and are ignored. Exceptions
+ * propagate and skipped input is not replayed, so an invalid callback can
+ * prevent input processing and drag cleanup.
+ * Each native Konva listener creates its own scope; a DOM event may invoke
+ * several listeners. Batching does not reorder or merge those listeners.
+ * @method
+ * @name Konva.Stage#eventBatchFunc
+ * @example
+ * stage.eventBatchFunc((run) => frameworkBatch(run));
+ */
+Factory.addGetterSetter(Stage, 'eventBatchFunc');
