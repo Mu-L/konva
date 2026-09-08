@@ -254,6 +254,22 @@ const activeTransformers = new Set<Transformer>();
  */
 export class Transformer extends Group {
   _nodes: Array<Node>;
+  // Bounds projected into this Transformer's rotation. Unchanged nodes can be
+  // reused during independent setters without delaying anchor updates.
+  _nodeRectCache?: Map<
+    Node,
+    {
+      rotation: number;
+      ignoreStroke: boolean;
+      version: number;
+      width: number;
+      height: number;
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    }
+  >;
   _movingAnchorName: string | null = null;
   // the pointer that grabbed the anchor, other pointers are ignored
   _pointerId?: number;
@@ -271,6 +287,7 @@ export class Transformer extends Group {
   _cursorChange: boolean;
   _elementsCreated = false;
   _updateScheduled = false;
+  _lastNodeRect?: Readonly<Box>;
 
   static isTransforming = () => {
     return activeTransformers.size > 0;
@@ -361,16 +378,19 @@ export class Transformer extends Group {
         // final _resetTransformCache + update, so per-attr fan-out here is
         // pure waste (was O(N*events) per resize step). A change made between
         // two pointer moves (e.g. a deferred state update) must get through.
-        if (this._fitting) return;
+        if (this._fitting) {
+          this._nodeRectCache?.delete(node);
+          return;
+        }
         if (this.nodes().length === 1 && this.useSingleNodeRotation()) {
           this.rotation(this.nodes()[0].getAbsoluteRotation());
         }
         // Cache reset stays synchronous so sync reads of tr.x() etc. are fresh.
-        this._resetTransformCache();
+        this._resetTransformCache(node);
         if (!this.isDragging()) {
           // Perf: an ancestor cascade (e.g. stage drag) fires
           // absoluteTransformChange on every attached node — without batching,
-          // update() runs once per node and each call walks all N nodes via
+          // a refresh runs once per node and each call walks all N nodes via
           // __getNodeRect, giving O(N^2) per drag frame.
           this._scheduleUpdate();
         }
@@ -483,7 +503,9 @@ export class Transformer extends Group {
    *   console.log('transform started');
    * });
    */
-  _resetTransformCache() {
+  _resetTransformCache(changedNode?: Node) {
+    if (changedNode) this._nodeRectCache?.delete(changedNode);
+    else this._nodeRectCache?.clear();
     this._clearCache(NODES_RECT);
     this._clearCache('transform');
     this._clearSelfAndDescendantCache('absoluteTransform');
@@ -504,40 +526,80 @@ export class Transformer extends Group {
       };
     }
 
-    const totalPoints: Vector2d[] = [];
-    this.nodes().map((node) => {
-      const box = node.getClientRect({
-        skipTransform: true,
-        skipShadow: true,
-        skipStroke: this.ignoreStroke(),
-      });
-      const points = [
-        { x: box.x, y: box.y },
-        { x: box.x + box.width, y: box.y },
-        { x: box.x + box.width, y: box.y + box.height },
-        { x: box.x, y: box.y + box.height },
-      ];
-      const trans = node.getAbsoluteTransform();
-      points.forEach(function (point) {
-        const transformed = trans.point(point);
-        totalPoints.push(transformed);
-      });
-    });
-
+    const rotation = Konva.getAngle(this.rotation());
+    const ignoreStroke = this.ignoreStroke();
     const tr = new Transform();
-    tr.rotate(-Konva.getAngle(this.rotation()));
-
-    let minX: number = Infinity,
-      minY: number = Infinity,
-      maxX: number = -Infinity,
-      maxY: number = -Infinity;
-    totalPoints.forEach(function (point) {
-      const transformed = tr.point(point);
-      minX = Math.min(minX, transformed.x);
-      minY = Math.min(minY, transformed.y);
-      maxX = Math.max(maxX, transformed.x);
-      maxY = Math.max(maxY, transformed.y);
-    });
+    tr.rotate(-rotation);
+    const cache = this._nodeRectCache || (this._nodeRectCache = new Map());
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const node of this.nodes()) {
+      // Bounds may only be reused when they are a pure function of the node's
+      // own size: then every change reaches us either through _setAttr or
+      // through the size probe below. A shape with its own getSelfRect - Line
+      // mutates its points array in place, and a user subclass can measure
+      // anything at all - may change with no signal, so it is measured every
+      // time. Groups depend on their descendants, and a cached ancestor
+      // suppresses descendant transform-change notifications, so both are
+      // measured too.
+      const cacheable =
+        node instanceof Shape &&
+        node.getSelfRect === Shape.prototype.getSelfRect &&
+        !node._hasCachedAncestor();
+      // width() and height() are the only inputs of the default getSelfRect and
+      // they can come from outside the attrs (an Image source that loads or
+      // resizes, Text metrics), so the attr revision alone cannot key them.
+      const width = cacheable ? node.width() : 0;
+      const height = cacheable ? node.height() : 0;
+      if (cacheable) node._attrsVersion ??= 0;
+      let bounds = cacheable ? cache.get(node) : undefined;
+      if (
+        !bounds ||
+        bounds.rotation !== rotation ||
+        bounds.ignoreStroke !== ignoreStroke ||
+        bounds.version !== node._attrsVersion ||
+        bounds.width !== width ||
+        bounds.height !== height
+      ) {
+        const box = node.getClientRect({
+          skipTransform: true,
+          skipShadow: true,
+          skipStroke: ignoreStroke,
+        });
+        const points = [
+          { x: box.x, y: box.y },
+          { x: box.x + box.width, y: box.y },
+          { x: box.x + box.width, y: box.y + box.height },
+          { x: box.x, y: box.y + box.height },
+        ];
+        const trans = node.getAbsoluteTransform();
+        bounds = {
+          rotation,
+          ignoreStroke,
+          width,
+          height,
+          version: node._attrsVersion || 0,
+          minX: Infinity,
+          minY: Infinity,
+          maxX: -Infinity,
+          maxY: -Infinity,
+        };
+        for (const point of points) {
+          const projected = tr.point(trans.point(point));
+          bounds.minX = Math.min(bounds.minX, projected.x);
+          bounds.minY = Math.min(bounds.minY, projected.y);
+          bounds.maxX = Math.max(bounds.maxX, projected.x);
+          bounds.maxY = Math.max(bounds.maxY, projected.y);
+        }
+        if (cacheable) cache.set(node, bounds);
+      }
+      minX = Math.min(minX, bounds.minX);
+      minY = Math.min(minY, bounds.minY);
+      maxX = Math.max(maxX, bounds.maxX);
+      maxY = Math.max(maxY, bounds.maxY);
+    }
 
     tr.invert();
     const p = tr.point({ x: minX, y: minY });
@@ -726,6 +788,7 @@ export class Transformer extends Group {
       win.addEventListener('touchmove', this._handleMouseMove);
       win.addEventListener('mouseup', this._handleMouseUp, true);
       win.addEventListener('touchend', this._handleMouseUp, true);
+      win.addEventListener('touchcancel', this._handleMouseUp, true);
     }
 
     this._transforming = true;
@@ -744,6 +807,9 @@ export class Transformer extends Group {
     });
   }
   _handleMouseMove(e) {
+    this.getStage()?._batchEvents(() => this._moveTransform(e));
+  }
+  _moveTransform(e) {
     let x, y, newHypotenuse;
     const anchorNode = this._anchors[this._movingAnchorName!];
     const stage = anchorNode.getStage()!;
@@ -1015,7 +1081,8 @@ export class Transformer extends Group {
         return;
       }
     }
-    this._removeEvents(e);
+    if (stage) stage._batchEvents(() => this._removeEvents(e));
+    else this._removeEvents(e);
   }
   // the transformer positions itself in absolute coordinates (see
   // _getNodeRect), whatever the transforms of its ancestors are
@@ -1033,6 +1100,7 @@ export class Transformer extends Group {
         win.removeEventListener('touchmove', this._handleMouseMove);
         win.removeEventListener('mouseup', this._handleMouseUp, true);
         win.removeEventListener('touchend', this._handleMouseUp, true);
+        win.removeEventListener('touchcancel', this._handleMouseUp, true);
       }
       const node = this.getNode();
       activeTransformers.delete(this);
@@ -1275,7 +1343,7 @@ export class Transformer extends Group {
       if (!this._nodes?.length || this._fitting || this.isDragging()) {
         return;
       }
-      this.update();
+      this._update();
     });
   }
   /**
@@ -1290,7 +1358,42 @@ export class Transformer extends Group {
   }
 
   update() {
+    // Explicit updates and Transformer configuration changes also refresh
+    // styles and layout when the selected nodes' bounds are unchanged.
+    this._lastNodeRect = undefined;
+    this._update();
+  }
+
+  _update() {
     const attrs = this._getNodeRect();
+    this._updateElements(attrs);
+    const draggable = this.nodes().some((node) => node.draggable());
+    if (this._back.draggable() !== draggable) {
+      this._back.draggable(draggable);
+    }
+    const styleFunc = this.anchorStyleFunc();
+    if (styleFunc) {
+      Object.values(this._anchors).forEach((node) => styleFunc(node));
+    }
+    this.getLayer()?.batchDraw();
+  }
+
+  _updateElements(attrs: Box) {
+    const previous = this._lastNodeRect;
+    // Only element layout is cached. Drag handling, user callbacks and drawing
+    // remain in _update(). Custom styling needs fresh defaults on every update.
+    if (
+      previous &&
+      !this.anchorStyleFunc() &&
+      attrs.x === previous.x &&
+      attrs.y === previous.y &&
+      attrs.width === previous.width &&
+      attrs.height === previous.height &&
+      attrs.rotation === previous.rotation
+    ) {
+      return;
+    }
+    this._lastNodeRect = { ...attrs };
     this.rotation(Util._getRotation(attrs.rotation));
     const width = attrs.width;
     const height = attrs.height;
@@ -1418,18 +1521,9 @@ export class Transformer extends Group {
       stroke: this.borderStroke(),
       strokeWidth: this.borderStrokeWidth(),
       dash: this.borderDash(),
-      draggable: this.nodes().some((node) => node.draggable()),
       x: 0,
       y: 0,
     });
-
-    const styleFunc = this.anchorStyleFunc();
-    if (styleFunc) {
-      anchors.forEach((node) => {
-        styleFunc(node);
-      });
-    }
-    this.getLayer()?.batchDraw();
   }
   /**
    * determine if transformer is in active transform

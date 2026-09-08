@@ -1,6 +1,25 @@
 import { assert } from 'chai';
 
 import { addStage, Konva } from './test-utils.ts';
+import type { Transformer } from '../../src/shapes/Transformer.ts';
+
+function countAnchorWrites(tr: Transformer, mutate: () => void) {
+  let writes = 0;
+  const anchors = tr.find('._anchor');
+  const originals = anchors.map((anchor) => anchor.setAttrs);
+  try {
+    anchors.forEach((anchor, index) => {
+      anchor.setAttrs = function (attrs) {
+        writes++;
+        return originals[index].call(this, attrs);
+      };
+    });
+    mutate();
+    return writes;
+  } finally {
+    anchors.forEach((anchor, index) => (anchor.setAttrs = originals[index]));
+  }
+}
 
 // Regression / invariant tests for the Transformer & cascade-batching perf
 // fixes. Each `it` block targets a single observable property of the system
@@ -169,7 +188,7 @@ describe('TransformerPerfInvariants', function () {
 
   // ---------- Group 3: Transformer perf invariants ----------
 
-  it('Transformer.update() fires once per ancestor cascade regardless of attached node count', function () {
+  it('lays out anchors once per ancestor cascade regardless of attached node count', function () {
     const stage = addStage();
     const layer = new Konva.Layer();
     stage.add(layer);
@@ -190,26 +209,16 @@ describe('TransformerPerfInvariants', function () {
     layer.add(tr);
     layer.draw();
 
-    let updateCalls = 0;
-    const orig = (tr as any).update;
-    (tr as any).update = function () {
-      updateCalls++;
-      return orig.apply(this, arguments);
-    };
-
-    stage.x(5); // one ancestor change → cascade fires absoluteTransformChange
-    // on every attached rect; without the fix, update() would be called N times.
-
-    (tr as any).update = orig;
-
+    // The cascade fires absoluteTransformChange on every attached rect.
+    const writes = countAnchorWrites(tr, () => stage.x(5));
     assert.equal(
-      updateCalls,
-      1,
-      `expected exactly 1 update() per ancestor cascade with N=${N} attached nodes`
+      writes,
+      18,
+      'nine anchors receive defaults and layout once per cascade'
     );
   });
 
-  it('Transformer update count for a single setAttrs is independent of attached node count', function () {
+  it('anchor writes for a single setAttrs do not grow with attached node count', function () {
     // We do NOT (currently) batch update() across the per-attr *Change events
     // emitted by a single setAttrs — the cascade-depth counter only kicks in
     // for Container-rooted ancestor cascades. But the count must still NOT
@@ -235,26 +244,19 @@ describe('TransformerPerfInvariants', function () {
       layer.add(tr);
       layer.draw();
 
-      let count = 0;
-      const orig = (tr as any).update;
-      (tr as any).update = function () {
-        count++;
-        return orig.apply(this, arguments);
-      };
       // setAttrs on the FIRST attached node only — N controls how many
       // sibling listeners exist, not how many events fire.
-      rects[0].setAttrs({ x: 50, y: 50, width: 100, height: 100 });
-      (tr as any).update = orig;
-      return count;
+      return countAnchorWrites(tr, () =>
+        rects[0].setAttrs({ x: 50, y: 50, width: 100, height: 100 })
+      );
     }
 
     const n1 = countUpdates(1);
     const n100 = countUpdates(100);
-    assert.equal(
-      n1,
-      n100,
-      `update() count must not depend on attached node count (N=1: ${n1}, N=100: ${n100})`
-    );
+    // More selected nodes can leave the selection union unchanged, allowing
+    // fewer anchor refreshes. It must never add refreshes for the same writes.
+    assert.isAtMost(n100, n1);
+    assert.isAbove(n1, 0);
   });
 
   it('Transformer state (anchor positions) is correct synchronously after an ancestor change', function () {
@@ -331,5 +333,387 @@ describe('TransformerPerfInvariants', function () {
     );
 
     Konva.autoDrawEnabled = prev;
+  });
+});
+
+describe('Transformer selected-node bounds reuse', function () {
+  it('recalculates only changed shapes while keeping every setter synchronously fresh', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const nodes = Array.from(
+      { length: 100 },
+      (_, i) => new Konva.Rect({ x: i * 20, width: 10, height: 10 })
+    );
+    layer.add(...nodes);
+    const tr = new Konva.Transformer({ nodes });
+    layer.add(tr);
+    const reads = Array(100).fill(0);
+    nodes.forEach((node, i) => {
+      const original = node.getClientRect;
+      node.getClientRect = function (config) {
+        reads[i]++;
+        return original.call(this, config);
+      };
+    });
+    nodes.forEach((node, i) => {
+      node.width(15);
+      assert.equal(tr.findOne('.top-right')!.x(), i === 99 ? 1995 : 1990);
+    });
+    assert.deepEqual(reads, Array(100).fill(1));
+  });
+});
+
+describe('Transformer unchanged selection geometry', function () {
+  it('restores default anchor styling when a conditional style stops applying', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const outer = new Konva.Rect({ width: 100, height: 100 });
+    const inner = new Konva.Rect({ width: 20, height: 20 });
+    layer.add(outer, inner);
+    const tr = new Konva.Transformer({
+      nodes: [outer, inner],
+      anchorFill: 'green',
+      anchorSize: 10,
+      anchorStyleFunc(anchor) {
+        if (inner.width() > 10) {
+          anchor.fill('red');
+          anchor.width(30);
+        }
+      },
+    });
+    layer.add(tr);
+    const anchor = tr.findOne('.top-left')!;
+    assert.equal(anchor.fill(), 'red');
+    assert.equal(anchor.width(), 30);
+    inner.width(5);
+    assert.equal(tr.width(), 100);
+    assert.equal(anchor.fill(), 'green');
+    assert.equal(anchor.width(), 10);
+  });
+
+  it('does not rewrite unchanged drag configuration during layout', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const node = new Konva.Rect({ width: 20, height: 20, draggable: true });
+    layer.add(node);
+    const tr = new Konva.Transformer({ nodes: [node] });
+    layer.add(tr);
+    const back = tr.findOne('.back')!;
+    const setDraggable = back.setDraggable;
+    let writes = 0;
+    back.setDraggable = function (value) {
+      writes++;
+      return setDraggable.call(this, value);
+    };
+    try {
+      node.width(30);
+      assert.equal(tr.findOne('.top-right')!.x(), 30);
+      assert.isTrue(back.draggable());
+      assert.equal(writes, 0);
+    } finally {
+      back.setDraggable = setDraggable;
+    }
+  });
+
+  it('still refreshes configuration and explicit updates with unchanged bounds', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const node = new Konva.Rect({ width: 20, height: 20 });
+    layer.add(node);
+    const tr = new Konva.Transformer({ nodes: [node] });
+    layer.add(tr);
+    const anchor = tr.findOne('.top-left')!;
+    tr.padding(3);
+    assert.equal(anchor.offsetX(), 8);
+    tr.anchorSize(20);
+    assert.equal(anchor.offsetX(), 13);
+    anchor.x(100);
+    tr.update();
+    assert.equal(anchor.x(), 0);
+    anchor.x(100);
+    tr.forceUpdate();
+    assert.equal(anchor.x(), 0);
+  });
+
+  it('keeps requesting drawing when selected bounds stay unchanged', async function () {
+    const autoDraw = Konva.autoDrawEnabled;
+    Konva.autoDrawEnabled = false;
+    try {
+      const stage = addStage();
+      const layer = new Konva.Layer();
+      stage.add(layer);
+      const outer = new Konva.Rect({ width: 100, height: 100 });
+      const inner = new Konva.Rect({ width: 10, height: 10 });
+      layer.add(outer, inner);
+      const tr = new Konva.Transformer({ nodes: [outer, inner] });
+      layer.add(tr);
+      // Let any setup draw finish before measuring the selected-node change.
+      await new Promise<void>((resolve) =>
+        Konva.Util.requestAnimFrame(resolve)
+      );
+      let draws = 0;
+      layer.on('draw', () => draws++);
+      inner.width(15);
+      await new Promise<void>((resolve) =>
+        Konva.Util.requestAnimFrame(resolve)
+      );
+      assert.equal(draws, 1);
+      assert.equal(tr.findOne('.top-right')!.x(), 100);
+    } finally {
+      Konva.autoDrawEnabled = autoDraw;
+    }
+  });
+
+  it('changes drag handling without rebuilding unchanged anchors', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const node = new Konva.Rect({ width: 20, height: 20 });
+    layer.add(node);
+    const tr = new Konva.Transformer({ nodes: [node] });
+    layer.add(tr);
+    assert.isUndefined(tr.anchorStyleFunc());
+    const writes = countAnchorWrites(tr, () => {
+      node.draggable(true);
+      assert.isTrue(tr.findOne('.back')!.draggable());
+      node.draggable(false);
+      assert.isFalse(tr.findOne('.back')!.draggable());
+    });
+    assert.equal(writes, 0, 'draggable changes do not affect anchor layout');
+  });
+
+  it('keeps anchors fresh without rebuilding them for an unchanged union', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const nodes = Array.from(
+      { length: 100 },
+      () => new Konva.Rect({ width: 10, height: 10 })
+    );
+    layer.add(...nodes);
+    const tr = new Konva.Transformer({ nodes });
+    layer.add(tr);
+    const writes = countAnchorWrites(tr, () => {
+      nodes.forEach((node) => {
+        node.width(20);
+        assert.equal(tr.findOne('.top-right')!.x(), 20);
+      });
+    });
+    assert.equal(writes, 18);
+    // Configuration and user styling still refresh even if geometry is equal.
+    let styles = 0;
+    tr.anchorStyleFunc(() => styles++);
+    styles = 0;
+    nodes[0].width(15);
+    assert.equal(styles, 9);
+    nodes[1].draggable(true);
+    assert.isTrue(tr.findOne('.back')!.draggable());
+  });
+
+  it('observes arbitrary shape attributes when another selected node triggers a refresh', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const shape = new Konva.Shape({ extent: 10 });
+    shape.getSelfRect = () => ({
+      x: 0,
+      y: 0,
+      width: shape.getAttr('extent'),
+      height: 10,
+    });
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(shape, sibling);
+    const tr = new Konva.Transformer({ nodes: [shape, sibling] });
+    layer.add(tr);
+    shape.setAttr('extent', 30);
+    sibling.width(6);
+    assert.equal(tr.findOne('.top-right')!.x(), 30);
+  });
+});
+
+describe('Transformer bounds invalidation', function () {
+  it('refreshes changed descendants when a selected group is measured again', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const child = new Konva.Rect({ width: 10, height: 10 });
+    const group = new Konva.Group().add(child);
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(group, sibling);
+    const tr = new Konva.Transformer({ nodes: [group, sibling] });
+    layer.add(tr);
+    child.width(30);
+    sibling.width(6);
+    assert.equal(tr.findOne('.top-right')!.x(), 30);
+    child.width(40);
+    tr.forceUpdate();
+    assert.equal(tr.findOne('.top-right')!.x(), 40);
+  });
+});
+
+describe('Transformer mutable image dimensions', function () {
+  it('refreshes an intrinsically sized image after its canvas source is resized', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const source = Konva.Util.createCanvasElement();
+    source.width = 10;
+    source.height = 10;
+    const image = new Konva.Image({ image: source });
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(image, sibling);
+    const tr = new Konva.Transformer({ nodes: [image, sibling] });
+    layer.add(tr);
+    source.width = 30;
+    sibling.width(6);
+    assert.equal(image.width(), 30);
+    assert.equal(tr.findOne('.top-right')!.x(), 30);
+  });
+});
+
+describe('Transformer asynchronous image dimensions', function () {
+  it('observes a loaded image when the selection is next refreshed', async function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const source = Konva.Util.createImageElement();
+    const loaded = new Promise<void>((resolve, reject) => {
+      source.onload = () => resolve();
+      source.onerror = reject;
+    });
+    const image = new Konva.Image({ image: source });
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(image, sibling);
+    const tr = new Konva.Transformer({ nodes: [image, sibling] });
+    layer.add(tr);
+    const canvas = Konva.Util.createCanvasElement();
+    canvas.width = 30;
+    canvas.height = 10;
+    source.src = canvas.toDataURL();
+    await loaded;
+    sibling.width(6);
+    assert.equal(tr.findOne('.top-right')!.x(), 30);
+  });
+});
+
+describe('Transformer bounds under a cached ancestor', function () {
+  for (const attrs of [
+    { x: 100 },
+    { scaleX: 2, scaleY: 3 },
+    { rotation: 30 },
+  ]) {
+    it(`matches a fresh selection after ${JSON.stringify(attrs)}`, function () {
+      const stage = addStage();
+      const layer = new Konva.Layer();
+      stage.add(layer);
+      const child = new Konva.Rect({ width: 10, height: 10, fill: 'red' });
+      const group = new Konva.Group().add(child);
+      const sibling = new Konva.Rect({ x: 20, width: 5, height: 5 });
+      layer.add(group, sibling);
+      group.cache();
+      const tr = new Konva.Transformer({ nodes: [child, sibling] });
+      layer.add(tr);
+      group.setAttrs(attrs);
+      sibling.width(6);
+      const read = () => [
+        tr.x(),
+        tr.y(),
+        tr.width(),
+        tr.height(),
+        tr.findOne('.top-right')!.getAbsolutePosition().x,
+        tr.findOne('.top-right')!.getAbsolutePosition().y,
+      ];
+      const actual = read();
+      tr.forceUpdate();
+      assert.deepEqual(actual, read());
+    });
+  }
+});
+
+describe('Transformer bounds after an ancestor cache lifecycle', function () {
+  for (const attrs of [
+    { x: 100 },
+    { scaleX: 2, scaleY: 3 },
+    { rotation: 30 },
+  ]) {
+    it(`discards bounds saved before caching after ${JSON.stringify(attrs)}`, function () {
+      const stage = addStage();
+      const layer = new Konva.Layer();
+      stage.add(layer);
+      const child = new Konva.Rect({ width: 10, height: 10, fill: 'red' });
+      const group = new Konva.Group().add(child);
+      const sibling = new Konva.Rect({ x: 20, width: 5, height: 5 });
+      layer.add(group, sibling);
+      const tr = new Konva.Transformer({ nodes: [child, sibling] });
+      layer.add(tr);
+
+      // No selection read occurs while the ancestor is cached.
+      group.cache();
+      group.setAttrs(attrs);
+      group.clearCache();
+      sibling.width(6);
+      const read = () => [
+        tr.x(),
+        tr.y(),
+        tr.width(),
+        tr.height(),
+        tr.findOne('.top-right')!.getAbsolutePosition(),
+      ];
+      const actual = read();
+      tr.forceUpdate();
+      assert.deepEqual(actual, read());
+    });
+  }
+});
+
+describe('Transformer bounds from shapes that measure themselves', function () {
+  it('refreshes a line whose points array is mutated in place', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    const line = new Konva.Line({
+      points: [0, 0, 100, 100],
+      stroke: 'red',
+      strokeWidth: 1,
+    });
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(line, sibling);
+    const tr = new Konva.Transformer({ nodes: [line, sibling] });
+    layer.add(tr);
+    assert.equal(tr.width(), 101);
+    line.points().push(300, 300);
+    sibling.width(6);
+    assert.equal(tr.width(), 301);
+  });
+
+  it('refreshes a custom shape whose getSelfRect reads outside its attrs', function () {
+    const stage = addStage();
+    const layer = new Konva.Layer();
+    stage.add(layer);
+    let size = 100;
+    class Custom extends Konva.Shape {
+      _sceneFunc(context) {
+        context.beginPath();
+        context.rect(0, 0, size, size);
+        context.closePath();
+        context.fillStrokeShape(this);
+      }
+      getSelfRect() {
+        return { x: 0, y: 0, width: size, height: size };
+      }
+    }
+    const custom = new Custom({ fill: 'green' });
+    const sibling = new Konva.Rect({ width: 5, height: 5 });
+    layer.add(custom, sibling);
+    const tr = new Konva.Transformer({ nodes: [custom, sibling] });
+    layer.add(tr);
+    assert.equal(tr.width(), 100);
+    size = 300;
+    sibling.width(6);
+    assert.equal(tr.width(), 300);
   });
 });

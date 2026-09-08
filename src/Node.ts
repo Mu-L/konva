@@ -297,6 +297,9 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     y: number;
   } | null = null;
   _attrsAffectingSize!: string[];
+  // Enabled lazily by Transformer so arbitrary custom shape attrs can invalidate
+  // its per-node bounds. Never-selected nodes do not maintain a revision counter.
+  _attrsVersion?: number;
   _batchingTransformChange = false;
   _needClearTransformCache = false;
 
@@ -335,6 +338,9 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
       this._cache[attr] = undefined;
     } else {
       this._cache = {};
+      // clearCache() also reaches descendants whose ancestor transform changes
+      // were suppressed while cached. Invalidate their saved Transformer bounds.
+      if (this._attrsVersion !== undefined) this._attrsVersion++;
     }
   }
   // drop the cached canvases and give their memory back
@@ -2458,6 +2464,7 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
     } else {
       this.attrs[key] = val;
     }
+    if (this._attrsVersion !== undefined) this._attrsVersion++;
     if (this._shouldFireChangeEvents) {
       this._fireChangeEvent(key, oldVal, val);
     }
