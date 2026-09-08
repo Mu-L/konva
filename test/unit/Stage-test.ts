@@ -1472,6 +1472,23 @@ describe('Stage', function () {
       }
     }
   });
+  it('toBlob rejects when the canvas can not be encoded', async function () {
+    const stage = addStage();
+    const original = stage.toCanvas;
+    stage.toCanvas = function () {
+      return { toBlob: (callback) => callback(null) } as any;
+    };
+    let error: Error | null = null;
+    try {
+      await stage.toBlob();
+    } catch (e) {
+      error = e as Error;
+    } finally {
+      stage.toCanvas = original;
+    }
+    assert.isNotNull(error, 'toBlob() resolved instead of rejecting');
+    assert.match(error!.message, /toBlob\(\) failed/);
+  });
 
   it('check hit graph with stage listening property', function () {
     var stage = addStage();

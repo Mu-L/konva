@@ -104,3 +104,8 @@ stage.eventBatchFunc(undefined);
 // @ts-expect-error Shapes do not expose a framework integration hook.
 new Konva.Rect().eventBatchFunc();
 void eventBatch;
+
+// toBlob() resolves with a Blob: it rejects instead of handing back null.
+const blob: Promise<Blob> = new Konva.Rect().toBlob();
+new Konva.Rect().toBlob({ callback: (value: Blob) => void value });
+void blob;

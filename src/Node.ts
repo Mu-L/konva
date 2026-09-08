@@ -2260,19 +2260,26 @@ export abstract class Node<Config extends NodeConfig = NodeConfig> {
    * @param {Boolean} [config.imageSmoothingEnabled] set this to false if you want to disable imageSmoothing
    * @example
    * var blob = await node.toBlob({});
-   * @returns {Promise<Blob>}
+   * @returns {Promise<Blob>} rejects if the canvas can not be encoded
    */
   toBlob(
     config?: ImageConfig & {
-      callback?: (blob: Blob | null) => void;
+      callback?: (blob: Blob) => void;
     }
   ) {
-    return new Promise((resolve, reject) => {
+    return new Promise<Blob>((resolve, reject) => {
       try {
         const callback = config?.callback;
         if (callback) delete config.callback;
         this.toCanvas(config).toBlob(
           (blob) => {
+            // the canvas reports a failed encode by passing null
+            if (!blob) {
+              reject(
+                new Error('Konva: toBlob() failed, the canvas was not encoded')
+              );
+              return;
+            }
             resolve(blob);
             callback?.(blob);
           },
