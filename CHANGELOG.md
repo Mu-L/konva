@@ -5,7 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
-- Fixed the `Konva.Node` JSDoc block being attached to a private helper, which dropped the `Konva.Node` page from the API reference
+- Added `Stage.eventBatchFunc()` for framework integrations to batch native input handlers. Note: direct `fire()` calls and programmatic changes are not batched
+- Improved `Transformer` performance with many selected nodes: unchanged shape bounds are reused, and anchors are not rebuilt when the selection rectangle is unchanged
+- Fixed `touchcancel` leaving a `Transformer` active and releasing the capture of an untouched pointer. Note: cancellation now fires `pointercancel`/`touchcancel` in addition to the existing `pointerup`
+- Fixed `toBlob()` typed as `Promise<unknown>`. It resolves with a `Blob`, and rejects instead of resolving with `null` when the canvas can not be encoded
+- Fixed the `Konva.Node` JSDoc block attaching to a private helper, which dropped the `Konva.Node` page from the API reference
 
 ## 10.4.0 (2026-09-07)
 
