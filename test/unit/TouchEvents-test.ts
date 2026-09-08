@@ -847,3 +847,50 @@ describe('TouchEvents', function () {
     assert.equal(click, 0, 'no click triggered');
   });
 });
+
+describe('Touch cancellation', function () {
+  for (const capture of [false, true]) {
+    it(`notifies and releases only canceled pointers with capture=${capture}`, function () {
+      const stage = addStage();
+      const layer = new Konva.Layer();
+      stage.add(layer);
+      const shapes = [0, 60, 120].map(
+        (x) => new Konva.Rect({ x, width: 40, height: 40, fill: 'red' })
+      );
+      layer.add(...shapes);
+      layer.draw();
+      const calls: string[] = [];
+      shapes.forEach((shape, i) => {
+        if (capture) shape.setPointerCapture(i + 1);
+        shape.on('touchcancel', (event) =>
+          calls.push(`cancel:${i}:${event.pointerId}`)
+        );
+        shape.on('pointerup', (event) =>
+          calls.push(`up:${i}:${event.pointerId}`)
+        );
+      });
+      const offset = stage.content?.getBoundingClientRect() || {
+        left: 0,
+        top: 0,
+      };
+      const point = (identifier: number, x: number, y: number) => ({
+        identifier,
+        clientX: offset.left + x,
+        clientY: offset.top + y,
+      });
+      stage._pointercancel({
+        type: 'touchcancel',
+        touches: [point(2, 80, 20)],
+        changedTouches: [
+          point(1, 20, capture ? 120 : 20),
+          point(3, 140, capture ? 120 : 20),
+        ],
+      } as any);
+      assert.deepEqual(calls, ['cancel:0:1', 'up:0:1', 'cancel:2:3', 'up:2:3']);
+      assert.deepEqual(
+        shapes.map((shape, i) => shape.hasPointerCapture(i + 1)),
+        [false, capture, false]
+      );
+    });
+  }
+});

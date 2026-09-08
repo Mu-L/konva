@@ -862,17 +862,26 @@ export class Stage extends Container<Layer, StageConfig> {
     }
   }
 
-  _pointercancel(evt: PointerEvent) {
+  _pointercancel(evt: PointerEvent | TouchEvent) {
     this.setPointersPositions(evt);
-    const shape =
-      PointerEvents.getCapturedShape(evt.pointerId) ||
-      this.getIntersection(this.getPointerPosition()!);
-
-    if (shape) {
-      shape._fireAndBubble(POINTERUP, PointerEvents.createEvent(evt));
-    }
-
-    PointerEvents.releaseCapture(evt.pointerId);
+    const events = getEventsMap(evt.type);
+    this._changedPointerPositions.forEach((pos) => {
+      const shape =
+        PointerEvents.getCapturedShape(pos.id) || this.getIntersection(pos);
+      const event = { evt, pointerId: pos.id };
+      if (shape) {
+        if (events) shape._fireAndBubble(events.pointercancel, { ...event });
+        // Keep the historical pointerup notification for cancellation listeners.
+        shape._fireAndBubble(POINTERUP, { ...event });
+      } else if (events) {
+        this._fire(events.pointercancel, {
+          ...event,
+          target: this,
+          currentTarget: this,
+        });
+      }
+      PointerEvents.releaseCapture(pos.id);
+    });
   }
 
   _lostpointercapture(evt: PointerEvent) {
